@@ -1,0 +1,19 @@
+name = "ev-desk-arena"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ev-desk-arena"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[vars]
+ARENA_SYMBOLS = "BTCUSDT,ETHUSDT,SOLUSDT"
+ARENA_TIMEFRAMES = "15m,1h,4h"
+ARENA_SOURCE = "Binance public market data"
+ALLOWED_ORIGIN = "*"
+
+# Use `wrangler secret put ADMIN_TOKEN` for the optional manual-run endpoint.
