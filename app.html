@@ -143,7 +143,7 @@
   .closeX{float:right;cursor:pointer;color:var(--muted);font-size:18px;line-height:1}
   .demoflag{font-size:11px;color:#e3c07a;background:#2d2418;border:1px solid #5c4a1f;border-radius:8px;padding:6px 10px;margin-top:12px}
   /* 顶部导航 + 分页 */
-  .nav{display:flex;gap:6px;margin:10px 0 4px;border-bottom:1px solid var(--border)}
+  .nav{display:flex;gap:6px;margin:10px 0 4px;border-bottom:1px solid var(--border);overflow-x:auto;white-space:nowrap}
   .nav a{padding:9px 16px;font-size:14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-weight:600}
   .nav a.on{color:var(--txt);border-bottom-color:var(--accent)}
   .page{display:none} .page.on{display:block}
@@ -160,6 +160,24 @@
   .jbtns button{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:4px}
   .jbtns button.win{color:#4ac26b}.jbtns button.lose{color:#f0776f}
   .mrow{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border);font-size:13px}
+  /* 专家前瞻赛场 */
+  .arena-hero{background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(46,160,67,.06));border:1px solid #3b82f655;border-radius:16px;padding:16px 18px;margin:12px 0}
+  .arena-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .arena-title{font-size:20px;font-weight:800}.arena-desc{font-size:12.5px;color:#c9d1d9;max-width:720px;margin-top:4px}
+  .arena-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  @media(max-width:720px){.arena-kpis{grid-template-columns:repeat(2,1fr)}}
+  .arena-kpi{background:#0d111788;border:1px solid var(--border);border-radius:10px;padding:10px}.arena-kpi b{display:block;font-size:20px}.arena-kpi span{font-size:10.5px;color:var(--muted)}
+  .audit-strip{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.audit-strip span{font-size:11px;padding:4px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);color:#c9d1d9}
+  .leader{display:grid;gap:8px;margin-top:12px}
+  .leader-row{display:grid;grid-template-columns:minmax(145px,1.25fr) 78px 72px 72px 78px 92px 66px;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:10px 12px;cursor:pointer}
+  .leader-row:hover{border-color:var(--accent)}.leader-row.head{background:transparent;border:none;color:var(--muted);font-size:10.5px;cursor:default;padding-top:2px;padding-bottom:2px}
+  .expert-name{font-weight:750}.expert-meta{font-size:10.5px;color:var(--muted)}.metric{text-align:right;font-variant-numeric:tabular-nums}
+  .grade{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:999px;text-align:center}.g-warm{background:#3a4150;color:#c9d1d9}.g-watch{background:#d2992222;color:#e3c07a}.g-good{background:#2ea04322;color:#73d58a}.g-bad{background:#e5534b22;color:#f0776f}
+  .grow-up{color:#73d58a}.grow-down{color:#f0776f}.grow-flat{color:var(--muted)}
+  .arena-open{margin-top:14px}.open-card{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:7px 9px;margin:0 6px 6px 0;font-size:11.5px}
+  .ledger{width:100%;border-collapse:collapse;font-size:11.5px}.ledger th,.ledger td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}.ledger th:first-child,.ledger td:first-child{text-align:left}
+  .forward-mini{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-size:10.8px;color:var(--muted);display:flex;justify-content:space-between;gap:6px}
+  .forward-mini b{font-variant-numeric:tabular-nums}
   footer{color:var(--muted);font-size:12px;margin:22px 0 10px;text-align:center}
 </style>
 </head>
@@ -176,6 +194,7 @@
   <nav class="nav">
     <a id="nav-desk" class="on" onclick="showPage('desk')">📟 决策台</a>
     <a id="nav-radar" onclick="showPage('radar')">📡 雷达</a>
+    <a id="nav-arena" onclick="showPage('arena')">🏟️ 专家赛场</a>
     <a id="nav-growth" onclick="showPage('growth')">📈 成长</a>
     <a id="nav-me" onclick="showPage('me')">⚙️ 我的</a>
   </nav>
@@ -252,11 +271,13 @@
     <div id="radarBox" style="margin-top:12px"></div>
   </div>
 
+  <div class="page" id="pArena"><div id="arenaBox"></div></div>
+
   <div class="page" id="pGrowth"><div id="growthBox" style="margin-top:12px"></div></div>
 
   <div class="page" id="pMe"><div id="meBox" style="margin-top:12px"></div></div>
 
-  <footer id="deskFoot">专家按立场分三栏 · 点卡片=选中/取消 · 点「战绩 ›」看该专家在此标的×周期的表现 · 数据源 Binance→OKX→Kraken</footer>
+  <footer id="deskFoot">专家按立场分三栏 · 「回测」看历史，「成长」看启用后的前瞻模拟 · 专家赛场按新收盘K线封存与结算 · 数据源 Binance→OKX→Kraken</footer>
 </div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeDetail()"><div class="sheet"></div></div>
@@ -1184,11 +1205,13 @@ function cardInner(c){
     const body = s
       ? `胜率<b class="${s.win>=50?'win':''}">${s.win}%</b> · 期望<b class="${s.ev>=0?'win':'neg'}">${s.ev>=0?'+':''}${s.ev}R</b> · 盈亏比<b>${s.pf}</b> <span style="opacity:.7">(${s.trades}笔)</span>`
       : `<span style="opacity:.7">回测:该标的/周期待接入</span>`;
-    mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">📈 战绩 ›</span></div>`;}
+    mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">📈 回测 ›</span></div>`;}
+  const fs=st.na?null:forwardStats(c.name),fm=fs&&fs.n?`前瞻 ${fs.n}笔 · EV <b style="color:${fs.ev>=0?"#73d58a":"#f0776f"}">${fs.ev>=0?"+":""}${fs.ev.toFixed(2)}R</b>`:"前瞻样本收集中";
+  const forward=st.na?"":`<div class="forward-mini"><span>${fm}</span><span class="track" onclick="event.stopPropagation();openExpertLab('${c.name}')">🏟️ 成长 ›</span></div>`;
   return `<span class="selmark">✓ 已选</span>
     <div class="chead"><div><div class="cname">${c.name}</div><div class="cschool">${c.school}</div>
       <div class="conf">信心：${c.conf}</div></div>${badge(c)}</div>
-    <ul class="reasons">${reasons}</ul>${lvls}${note}${mini}${wrow}`;
+    <ul class="reasons">${reasons}</ul>${lvls}${note}${mini}${forward}${wrow}`;
 }
 function renderCards(){
   const grid=document.getElementById("grid");grid.className="";
@@ -1217,7 +1240,7 @@ function realStats(name,sym,tf){
 function statFor(name){ return getStat(name,curSym,curTF); }
 function curveSVG(curve){
   const w=520,h=90,pad=5,mn=Math.min(...curve,0),mx=Math.max(...curve,0),rg=(mx-mn)||1;
-  const pts=curve.map((v,i)=>{const x=pad+i/(curve.length-1)*(w-2*pad);const y=h-pad-(v-mn)/rg*(h-2*pad);return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
+  const div=Math.max(1,curve.length-1),pts=curve.map((v,i)=>{const x=pad+i/div*(w-2*pad);const y=h-pad-(v-mn)/rg*(h-2*pad);return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
   const zy=(h-pad-(0-mn)/rg*(h-2*pad)).toFixed(1);
   const col=curve[curve.length-1]>=0?'#2ea043':'#e5534b';
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><line x1="0" y1="${zy}" x2="${w}" y2="${zy}" stroke="#2a3240" stroke-dasharray="3 3"/><polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/></svg>`;
@@ -1261,7 +1284,7 @@ function resetWeights(){CARDS.forEach(c=>state[c.name].w=3);save();renderCards()
 function clearSaved(){try{localStorage.removeItem("panelStateLive")}catch(e){}state={};ensureState();renderCards();recompute();}
 function recompute(){let num=0,den=0,nl=0,ns=0,nn=0,longW=0,shortW=0;
   CARDS.forEach(c=>{const st=state[c.name];if(!st.sel||st.na)return;
-    const t=dirType(c.dir),cw=CONFW[c.conf]??0.3,w=st.w;den+=w;
+    const t=dirType(c.dir),cw=CONFW[c.conf]??0.3,w=st.w*trustMultiplier(c.name);den+=w;
     if(t==="long"){num+=w*cw;nl++;longW+=w;}else if(t==="short"){num-=w*cw;ns++;shortW+=w;}else nn++;});
   const score=den?num/den:0,pct=(score*0.5+0.5)*100;
   document.getElementById("mark").style.left=Math.max(1,Math.min(99,pct))+"%";
@@ -1274,7 +1297,7 @@ function recompute(){let num=0,den=0,nl=0,ns=0,nn=0,longW=0,shortW=0;
   document.getElementById("vlabel").textContent=label;
   document.getElementById("vlabel").style.color=color;
   document.getElementById("vscore").textContent=(nl+ns+nn)?`　净分 ${score>=0?"+":""}${score.toFixed(2)}`:"";
-  document.getElementById("tally").innerHTML=`已选 <b>${nl+ns+nn}</b> 位　|　偏多 <b>${nl}</b>(权重${longW})　偏空 <b>${ns}</b>(权重${shortW})　中性 <b>${nn}</b>`+((nl>0&&ns>0)?"　·　⚠️ 有分歧":"");
+  document.getElementById("tally").innerHTML=`已选 <b>${nl+ns+nn}</b> 位　|　偏多 <b>${nl}</b>(权重${longW.toFixed(1)})　偏空 <b>${ns}</b>(权重${shortW.toFixed(1)})　中性 <b>${nn}</b>`+((nl>0&&ns>0)?"　·　⚠️ 有分歧":"")+(loadLab().adaptive?"　·　🏟️ 前瞻校准开启":"");
   renderEV(nl,ns,nn);
 }
 
@@ -1432,6 +1455,122 @@ function getStat(name,sym,tf){const k=symKey(sym);
   if(LIVESTATS[k]&&LIVESTATS[k][tf]&&LIVESTATS[k][tf][name])return LIVESTATS[k][tf][name];
   try{const s=REALSTATS.stats[name][k][tf];return s?{win:s.win,ev:s.ev,pf:s.pf,trades:s.n,curve:s.curve||[]}:null;}catch(e){return null;}}
 
+/* ============ 专家前瞻赛场: 信号封存 → 模拟成交 → 不可回删结算 ============ */
+const LAB_KEY="expertForwardArenaV1",LAB_VERSION=1;
+function emptyLab(){return {version:LAB_VERSION,startedAt:Date.now(),enabled:true,adaptive:true,lastBar:{},positions:[],trades:[],canceled:[],lastUpdate:null};}
+function loadLab(){try{const x=JSON.parse(localStorage.getItem(LAB_KEY)||"null");if(x&&x.version===LAB_VERSION)return Object.assign(emptyLab(),x);}catch(e){}return emptyLab();}
+function saveLab(x){try{localStorage.setItem(LAB_KEY,JSON.stringify(x));}catch(e){}}
+function labCtx(sym=curSym,tf=curTF){return sym+"|"+tf;}
+function labRegime(){const r=marketRegime();return r.dir+" · "+r.vol;}
+function closeForward(lab,p,rawR,bar,why){
+  const risk=Math.abs(p.entry-p.stop)||1,costR=(p.entry*.001)/risk,R=Math.round((rawR-costR)*1000)/1000;
+  lab.trades.push(Object.assign({},p,{status:"closed",closedBar:bar[0],closedAt:Date.now(),exit:bar[4],R,rawR,why,costR:Math.round(costR*1000)/1000}));
+}
+function processForwardBar(lab,bar,ctx){
+  const next=[];
+  lab.positions.forEach(p=>{
+    if(p.ctx!==ctx){next.push(p);return;}
+    if(bar[0]<=p.createdBar){next.push(p);return;}
+    p.age=(p.age||0)+1;
+    let entered=p.status==="active";
+    if(!entered){
+      const touch=bar[3]<=p.entry&&bar[2]>=p.entry;
+      if(!touch){if(p.age<=12)next.push(p);else lab.canceled.push(Object.assign({},p,{status:"expired",expiredBar:bar[0]}));return;}
+      p.status="active";p.entryBar=bar[0];p.held=0;entered=true;
+    }
+    p.held=(p.held||0)+1;
+    const stopHit=p.dir==="long"?bar[3]<=p.stop:bar[2]>=p.stop;
+    const targetHit=p.dir==="long"?bar[2]>=p.target:bar[3]<=p.target;
+    if(stopHit){closeForward(lab,p,-1,bar,targetHit?"同根触及止损与目标，按悲观规则先止损":"止损");return;}
+    if(targetHit){closeForward(lab,p,p.rr,bar,"目标");return;}
+    if(p.held>=30){const raw=p.dir==="long"?(bar[4]-p.entry)/Math.abs(p.entry-p.stop):(p.entry-bar[4])/Math.abs(p.entry-p.stop);closeForward(lab,p,raw,bar,"30根超时退出");return;}
+    next.push(p);
+  });
+  lab.positions=next;
+}
+function sealForwardSignals(lab,sym,tf,cards,closedBar){
+  const ctx=labCtx(sym,tf),plans=scenarioPlans();
+  cards.forEach(c=>{
+    const dir=dirType(c.dir);if(dir!=="long"&&dir!=="short")return;
+    if(lab.positions.some(p=>p.ctx===ctx&&p.expert===c.name))return;
+    const plan=plans.filter(x=>x.dir===dir).sort((x,y)=>(y.primary?2:0)-(x.primary?2:0)||y.rr-x.rr)[0];
+    if(!plan||!Number.isFinite(plan.rr)||plan.rr<1||!Number.isFinite(plan.entry)||!Number.isFinite(plan.stop)||!Number.isFinite(plan.target))return;
+    const id=[c.name,sym,tf,closedBar[0]].join("|");
+    if(lab.trades.some(x=>x.id===id)||lab.positions.some(x=>x.id===id)||lab.canceled.some(x=>x.id===id))return;
+    lab.positions.push({id,ctx,expert:c.name,school:c.school,sym,tf,dir,conf:c.conf,createdBar:closedBar[0],createdAt:Date.now(),
+      signalPrice:closedBar[4],entry:plan.entry,stop:plan.stop,target:plan.target,rr:plan.rr,trigger:plan.trigger,invalid:plan.invalid,
+      regime:labRegime(),status:"pending",age:0,held:0});
+  });
+}
+function forwardStep(sym=curSym,tf=curTF,D=window.DALL,cards=CARDS){
+  if(!D||!cards||!cards.length)return;const lab=loadLab();if(!lab.enabled)return;
+  const bars=(D["4h"]||[]).slice(0,-1);if(!bars.length)return;
+  const ctx=labCtx(sym,tf),lastClosed=bars[bars.length-1],last=lab.lastBar[ctx];
+  if(last!=null)bars.filter(b=>b[0]>last).forEach(b=>processForwardBar(lab,b,ctx));
+  lab.lastBar[ctx]=lastClosed[0];
+  sealForwardSignals(lab,sym,tf,cards,lastClosed);
+  lab.positions=lab.positions.slice(-250);lab.trades=lab.trades.slice(-1200);lab.canceled=lab.canceled.slice(-400);lab.lastUpdate=Date.now();saveLab(lab);
+}
+function forwardTrades(name,sym=null,tf=null){return loadLab().trades.filter(t=>(!name||t.expert===name)&&(!sym||t.sym===sym)&&(!tf||t.tf===tf));}
+function forwardStats(name,sym=null,tf=null){
+  const T=forwardTrades(name,sym,tf),R=T.map(x=>x.R),n=R.length,w=R.filter(x=>x>0),gp=w.reduce((a,b)=>a+b,0),gl=Math.abs(R.filter(x=>x<=0).reduce((a,b)=>a+b,0));
+  let eq=0,peak=0,mdd=0,curve=[];R.forEach(r=>{eq+=r;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);curve.push(Math.round(eq*100)/100);});
+  const ev=n?R.reduce((a,b)=>a+b,0)/n:0,win=n?w.length/n*100:0,pf=gl?gp/gl:(gp?9.99:0);
+  const recent=n>=5?R.slice(-Math.min(10,n)).reduce((a,b)=>a+b,0)/Math.min(10,n):null;
+  const prior=n>=10?R.slice(-Math.min(20,n),-Math.min(10,n)).reduce((a,b)=>a+b,0)/Math.min(10,n-10):null;
+  const growth=recent!=null&&prior!=null?recent-prior:null,by={};
+  T.forEach(t=>{(by[t.regime]||(by[t.regime]=[])).push(t.R);});
+  const regimes=Object.entries(by).map(([k,v])=>({name:k,n:v.length,ev:v.reduce((a,b)=>a+b,0)/v.length})).sort((a,b)=>b.ev-a.ev);
+  return {n,win,ev,pf,mdd,curve,total:eq,recent,prior,growth,best:regimes[0]||null,worst:regimes[regimes.length-1]||null};
+}
+function expertGrade(s){
+  if(s.n<5)return {txt:"热身中",cls:"g-warm"};if(s.n<20)return {txt:"观察期",cls:"g-watch"};
+  if(s.ev>=.12&&s.mdd>-8)return {txt:"前瞻有效",cls:"g-good"};if(s.ev<=-.12)return {txt:"降权观察",cls:"g-bad"};return {txt:"基本稳定",cls:"g-watch"};
+}
+function trustMultiplier(name){
+  const lab=loadLab();if(!lab.adaptive)return 1;const s=forwardStats(name);if(s.n<5)return 1;
+  const reliability=s.n/(s.n+25),ddPenalty=Math.max(0,(-s.mdd-6)/18);
+  return Math.max(.65,Math.min(1.35,1+reliability*s.ev*.42-reliability*ddPenalty*.16));
+}
+function growthMark(s){if(s.growth==null)return {txt:"收集中",cls:"grow-flat"};if(s.growth>.08)return {txt:"↑ "+s.growth.toFixed(2)+"R",cls:"grow-up"};if(s.growth<-.08)return {txt:"↓ "+Math.abs(s.growth).toFixed(2)+"R",cls:"grow-down"};return {txt:"→ 稳定",cls:"grow-flat"};}
+function renderExpertArena(){
+  const box=document.getElementById("arenaBox"),lab=loadLab(),names=ROSTER.map(fn=>{try{return fn().name}catch(e){return null}}).filter(Boolean);
+  const sealed=lab.trades.length+lab.positions.length+lab.canceled.length,active=lab.positions.filter(x=>x.status==="active").length,pending=lab.positions.filter(x=>x.status==="pending").length;
+  const rows=names.map(name=>({name,s:forwardStats(name),mult:trustMultiplier(name)})).sort((a,b)=>(b.s.n?b.s.ev*b.s.n/(b.s.n+20):-9)-(a.s.n?a.s.ev*a.s.n/(a.s.n+20):-9));
+  const leader=rows.map(x=>{const g=expertGrade(x.s),gm=growthMark(x.s),cur=lab.positions.filter(p=>p.expert===x.name).length;
+    return `<div class="leader-row" onclick="openExpertLab('${x.name}')"><div><div class="expert-name">${x.name}</div><div class="expert-meta">${cur?"进行中 "+cur+" 笔":"暂无进行中计划"}</div></div>
+      <span class="grade ${g.cls}">${g.txt}</span><span class="metric">${x.s.n}</span><span class="metric" style="color:${x.s.ev>=0?"#73d58a":"#f0776f"}">${x.s.n?(x.s.ev>=0?"+":"")+x.s.ev.toFixed(2):"—"}R</span>
+      <span class="metric">${x.s.n?x.s.win.toFixed(0)+"%":"—"}</span><span class="metric ${gm.cls}">${gm.txt}</span><span class="metric">${x.mult.toFixed(2)}x</span></div>`;}).join("");
+  const opens=lab.positions.slice(-10).map(p=>`<span class="open-card"><b>${p.expert}</b> · ${p.sym.replace("USDT","")} ${p.tf} · ${p.status==="active"?"已成交":"等触发"} · ${p.dir==="long"?"多":"空"}</span>`).join("");
+  box.innerHTML=`<div class="arena-hero"><div class="arena-head"><div><div class="arena-title">专家前瞻赛场</div>
+    <div class="arena-desc">只统计启用后的新K线。每个计划先封存再结算，失败单不可回删；同根同时碰止损和目标时先记止损。专家的成长是识别适用行情并校准可信权重，不是修改历史。</div></div>
+    <div style="display:flex;gap:7px"><button class="btn ${lab.enabled?"":"primary"}" onclick="toggleLab()">${lab.enabled?"暂停赛场":"启动赛场"}</button><button class="btn" onclick="toggleAdaptive()">动态权重 ${lab.adaptive?"开":"关"}</button><button class="btn" onclick="exportLab()">导出审计账本</button></div></div>
+    <div class="arena-kpis"><div class="arena-kpi"><b>${sealed}</b><span>累计封存信号</span></div><div class="arena-kpi"><b>${lab.trades.length}</b><span>已结算前瞻交易</span></div>
+      <div class="arena-kpi"><b>${active}</b><span>模拟持仓</span></div><div class="arena-kpi"><b>${pending}</b><span>等待触发</span></div></div>
+    <div class="audit-strip"><span>启用 ${new Date(lab.startedAt).toLocaleString()}</span><span>成本 0.10%</span><span>挂单12根失效</span><span>持仓30根超时</span><span>小样本权重收缩</span><span>当前浏览器本地账本</span></div></div>
+    <div class="arena-open"><b>正在赛场</b><div style="margin-top:7px">${opens||'<span class="vmeta">暂无方向与赔率同时合格的新计划；等待下一根收盘K线。</span>'}</div></div>
+    <div class="leader"><div class="leader-row head"><span>专家</span><span>状态</span><span class="metric">样本</span><span class="metric">前瞻EV</span><span class="metric">胜率</span><span class="metric">近期变化</span><span class="metric">权重</span></div>${leader}</div>
+    <div class="demoflag">可信度边界：这是当前浏览器从启用时刻开始积累的前瞻账本，不是全网公共榜。关闭网页时不会持续跑；要形成可付费的24小时统一赛场，后续需接服务端行情任务、数据库与签名账本。</div>`;
+}
+function toggleLab(){const x=loadLab();x.enabled=!x.enabled;if(x.enabled&&!x.startedAt)x.startedAt=Date.now();saveLab(x);renderExpertArena();}
+function toggleAdaptive(){const x=loadLab();x.adaptive=!x.adaptive;saveLab(x);renderExpertArena();renderCards();recompute();}
+function clearLab(){if(!confirm("清空当前浏览器的全部专家前瞻账本？此操作无法撤销。"))return;try{localStorage.removeItem(LAB_KEY)}catch(e){}renderExpertArena();renderCards();recompute();}
+function exportLab(){const x=loadLab(),b=new Blob([JSON.stringify(x,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ev-desk-expert-forward-ledger.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function openExpertLab(name){
+  const el=document.getElementById("modal"),lab=loadLab(),s=forwardStats(name),g=expertGrade(s),gm=growthMark(s),T=lab.trades.filter(t=>t.expert===name).slice(-12).reverse(),P=lab.positions.filter(p=>p.expert===name);
+  const ledger=T.map(t=>`<tr><td>${new Date(t.closedBar*1000).toLocaleDateString()}</td><td>${t.sym.replace("USDT","")} · ${t.tf}</td><td>${t.dir==="long"?"多":"空"}</td><td style="color:${t.R>=0?"#73d58a":"#f0776f"}">${t.R>=0?"+":""}${t.R.toFixed(2)}R</td><td>${t.why}</td></tr>`).join("");
+  el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>${name} · 前瞻成长档案</h3>
+    <div class="ctx">与历史回测分开 · 信号产生后才观察未来K线 · 当前可信权重 ${trustMultiplier(name).toFixed(2)}x</div>
+    <div class="kpis"><div class="kpi"><div class="n">${s.n}</div><div class="l">前瞻样本</div></div><div class="kpi"><div class="n" style="color:${s.ev>=0?"#73d58a":"#f0776f"}">${s.n?(s.ev>=0?"+":"")+s.ev.toFixed(2):"—"}R</div><div class="l">每笔EV</div></div>
+      <div class="kpi"><div class="n">${s.n?s.win.toFixed(0)+"%":"—"}</div><div class="l">胜率</div></div><div class="kpi"><div class="n">${s.n?s.mdd.toFixed(1):"—"}R</div><div class="l">最大回撤</div></div></div>
+    <div class="ctx"><span class="grade ${g.cls}">${g.txt}</span>　近期变化 <b class="${gm.cls}">${gm.txt}</b>　${s.best?`当前最佳环境：${s.best.name}（${s.best.n}笔 / ${s.best.ev.toFixed(2)}R）`:"尚在收集环境样本"}</div>
+    ${s.curve.length?`<div class="ctx" style="margin-top:12px">只含前瞻结算的累计R曲线</div>${curveSVG(s.curve)}`:'<div class="demoflag">还没有已结算前瞻交易。切换到1m/5m可更快积累测试样本，但小周期噪声和成本也更高。</div>'}
+    <div class="ctx" style="margin-top:12px">当前计划：${P.length?P.map(p=>p.sym.replace("USDT","")+" "+p.tf+" "+(p.status==="active"?"持仓":"待触发")).join(" · "):"无"}</div>
+    <table class="ledger"><tr><th>结算</th><th>市场</th><th>方向</th><th>结果</th><th>原因</th></tr>${ledger||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">暂无结算记录</td></tr>'}</table>
+    <div class="demoflag">成长口径：最近最多10笔EV减去此前最多10笔EV。动态权重使用样本量收缩，少于5笔不调整；方法逻辑不会为了美化结果自动重写。</div>`;
+  el.classList.add("on");
+}
+
 /* ============ 主流程 ============ */
 let curSym="BTCUSDT", timer=null, ticking=null, ws=null;
 window.DALL=null; window.CURSRC="";
@@ -1443,6 +1582,7 @@ async function refresh(){
     FUND=fund; window.DALL=ohlc.data; window.CURSRC=ohlc.name; buildLevels(ohlc.data);
     runBacktestAll();                       // 浏览器端当场算真实战绩
     CARDS=ROSTER.map(fn=>fn());
+    forwardStep(curSym,curTF,ohlc.data,CARDS);
     ensureState(); renderLevels(ohlc.name); renderCards(); recompute();
     document.getElementById("tfLabel").textContent=curTF;
     setStatus("ok",`数据就绪 · ${curTF} · OHLC@${ohlc.name}`+(fund?` · 费率@${fund.src}`:` · 费率不可用`));
@@ -1473,6 +1613,7 @@ function applyLiveKline(k){
   document.getElementById("gen").textContent="● 实时 "+new Date().toLocaleTimeString();
   if(k.x){ // 该周期收盘 → 全量重算(正式信号)+ 更新战绩
     buildLevels(window.DALL); runBacktestAll(); CARDS=ROSTER.map(fn=>fn()); ensureState();
+    forwardStep(curSym,curTF,window.DALL,CARDS);
     renderLevels("WS·"+(window.CURSRC||"Binance")); renderCards();
   }
   recompute(); // 每tick用最新价刷新EV/共识(预览)
@@ -1500,10 +1641,10 @@ document.getElementById("riskpct").oninput=()=>recompute();
 
 /* ============ 多页: 雷达 / 成长 / 我的 ============ */
 function showPage(p){
-  const map={desk:'pDesk',radar:'pRadar',growth:'pGrowth',me:'pMe'};
+  const map={desk:'pDesk',radar:'pRadar',arena:'pArena',growth:'pGrowth',me:'pMe'};
   for(const k in map){document.getElementById(map[k]).classList.toggle('on',k===p);document.getElementById('nav-'+k).classList.toggle('on',k===p);}
   const f=document.getElementById('deskFoot'); if(f)f.style.display=p==='desk'?'':'none';
-  if(p==='radar')renderRadar(); if(p==='growth')renderGrowth(); if(p==='me')renderMe();
+  if(p==='radar')renderRadar(); if(p==='arena')renderExpertArena(); if(p==='growth')renderGrowth(); if(p==='me')renderMe();
 }
 // ---- 自选 & 雷达 ----
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT"];
@@ -1515,7 +1656,7 @@ async function scanRadar(){
   const st=document.getElementById('scanStatus'); const list=getWatch().filter(isCrypto); RADAR=[];
   for(let i=0;i<list.length;i++){const sym=list[i]; st.textContent=`扫描中… ${i}/${list.length} (${sym.replace('USDT','')})`;
     try{const o=await getOHLC(sym); const D=o.data; window.DALL=D; buildLevels(D);
-      const cards=ROSTER.map(fn=>fn()); let nl=0,ns=0; cards.forEach(c=>{const t=dirType(c.dir);if(t==='long')nl++;else if(t==='short')ns++;});
+      const cards=ROSTER.map(fn=>fn()); forwardStep(sym,curTF,D,cards); let nl=0,ns=0; cards.forEach(c=>{const t=dirType(c.dir);if(t==='long')nl++;else if(t==='short')ns++;});
       const net=nl-ns, price=L.price, a=L.atr4||price*0.01; let dir=net>=2?'long':(net<=-2?'short':'flat'), rr=0;
       if(dir!=='flat'){let KL=null;try{KL=nearestLv(keyLevels(D["4h"],D["4h"].length-1,a),price);}catch(e){} let stop,tgt;
         if(dir==='long'){if(KL&&KL.sup&&KL.res&&KL.res.p>price+0.3*a){stop=KL.sup.p-0.4*a;tgt=KL.res.p;}else{stop=price-1.5*a;tgt=price+3*a;}if(stop>=price)stop=price-1.5*a;}
@@ -1584,7 +1725,7 @@ function renderGrowth(){
    <div class="demoflag" style="margin-top:12px">这是你亲手记录的真实交易战绩（本地保存）。真实、可追溯——比任何回测都有说服力。</div>`;
 }
 function renderMe(){
-  const box=document.getElementById('meBox'), j=getJournal();
+  const box=document.getElementById('meBox'), j=getJournal(),lab=loadLab();
   box.innerHTML=`
    <div class="mrow"><span>单笔风险 %</span><input type="number" value="${document.getElementById('riskpct').value}" style="width:60px" onchange="document.getElementById('riskpct').value=this.value;recompute()"></div>
    <div class="mrow"><span>账户 $</span><input type="number" value="${document.getElementById('acct').value}" style="width:96px" onchange="document.getElementById('acct').value=this.value;recompute()"></div>
@@ -1592,6 +1733,9 @@ function renderMe(){
    <div class="mrow"><span>编辑自选</span><input value="${getWatch().join(',')}" style="width:210px" onchange="setWatch(this.value.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean));renderMe()"></div>
    <div class="mrow"><span>已记录交易</span><span>${j.length} 笔 <button class="btn" onclick="if(confirm('清空全部交易记录?')){setJournal([]);renderMe();}">清空</button></span></div>
    <div class="mrow"><span>高手偏好</span><button class="btn" onclick="clearSaved()">清除并重置</button></div>
+   <div class="mrow"><span>专家前瞻赛场</span><span>${lab.enabled?"运行中":"已暂停"} · ${lab.trades.length} 笔结算 <button class="btn" onclick="showPage('arena')">查看</button></span></div>
+   <div class="mrow"><span>前瞻动态权重</span><button class="btn" onclick="toggleAdaptive();renderMe()">${lab.adaptive?"已开启":"已关闭"}</button></div>
+   <div class="mrow"><span>本地专家账本</span><button class="btn" onclick="clearLab();renderMe()">清空</button></div>
    <div class="demoflag" style="margin-top:12px">全部数据本地保存(localStorage)，不上传。分析推演 · 非投资建议。</div>`;
 }
 document.getElementById("scanBtn").onclick=scanRadar;
