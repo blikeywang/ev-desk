@@ -12,6 +12,7 @@ Cloudflare Worker + D1 implementation for a continuously running, publicly audit
 - 0.10% round-trip cost converted into R
 - Append-only signal/trade hashes linked through a hash chain
 - Public read-only leaderboard, expert record, positions, ledger and proof APIs
+- Cached opportunity snapshots ranked by plan quality for admin/secondary display
 - Optional token-protected manual run endpoint
 
 ## Setup
@@ -38,6 +39,7 @@ Until that URL is configured, the static app continues to use its browser-local 
 - `GET /health`
 - `GET /api/v1/arena/meta`
 - `GET /api/v1/arena/leaderboard?symbol=BTCUSDT&timeframe=4h`
+- `GET /api/v1/arena/opportunities?symbol=BTCUSDT&timeframe=4h`
 - `GET /api/v1/arena/experts/:id`
 - `GET /api/v1/arena/positions`
 - `GET /api/v1/arena/ledger?limit=100`
