@@ -78,10 +78,34 @@ async function sealSignals(env,symbol,timeframe,bar,analysis){
   }
   return created;
 }
+async function opportunityTrustMap(env,ids){
+  const out=Object.fromEntries(ids.map(x=>[x,1]));if(!ids.length)return out;
+  const marks=ids.map(()=>"?").join(","),r=await env.DB.prepare("SELECT expert_id,net_r FROM trades WHERE expert_id IN ("+marks+") ORDER BY closed_bar_ts ASC").bind(...ids).all(),by={};
+  (r.results||[]).forEach(x=>(by[x.expert_id]||(by[x.expert_id]=[])).push(x));
+  Object.entries(by).forEach(([id,rows])=>out[id]=trust(calcStats(rows)));
+  return out;
+}
+async function cacheOpportunity(env,symbol,timeframe,bar,analysis){
+  const directional=analysis.filter(x=>x.direction==="long"||x.direction==="short"),ids=directional.map(x=>x.id),trusts=await opportunityTrustMap(env,ids);
+  let longW=0,shortW=0;directional.forEach(x=>{const w=(+x.confidence||.3)*(trusts[x.id]||1);if(x.direction==="long")longW+=w;else shortW+=w;});
+  const total=longW+shortW,consensus=total?Math.abs(longW-shortW)/total:0,direction=directional.length<2||consensus<.18?"flat":longW>shortW?"long":"short";
+  const aligned=directional.filter(x=>x.direction===direction).sort((a,b)=>(b.confidence*(trusts[b.id]||1))-(a.confidence*(trusts[a.id]||1))),plans=aligned.filter(x=>x.plan).sort((a,b)=>(b.plan.rr||0)-(a.plan.rr||0)),pick=plans[0],plan=pick?.plan||null;
+  const price=analysis[0]?.price||bar[4],A=analysis[0]?.atr||price*.01,location=plan?Math.max(0,Math.min(1,1-Math.abs(price-plan.entry)/A/1.5)):0,rr=plan?.rr||0,rrQ=Math.max(0,Math.min(1,(rr-1)/2.2));
+  const trustAvg=aligned.length?aligned.reduce((s,x)=>s+(trusts[x.id]||1),0)/aligned.length:1,trustQ=Math.max(0,Math.min(1,(trustAvg-.65)/.7)),regime=analysis[0]?.regime||"区间/过渡";
+  const regimeFit=direction==="flat"?0:regime==="区间/过渡"?.7:((direction==="long"&&regime==="多头趋势")||(direction==="short"&&regime==="空头趋势"))?1:.35,conflict=total?Math.min(longW,shortW)/total:1;
+  let score=Math.max(0,Math.min(100,(consensus*.27+location*.27+rrQ*.23+trustQ*.13+regimeFit*.10)*100-conflict*25));if(!plan)score=Math.min(score,35);if(rr&&rr<1.2)score=Math.min(score,45);
+  const stage=plan&&score>=68&&location>=.62&&rr>=1.5?"A":plan&&score>=52&&rr>=1.3?"B":plan&&score>=35?"C":"D",top=aligned.slice(0,3).map(x=>x.name),opp=direction==="flat"?[]:directional.filter(x=>x.direction!==direction).sort((a,b)=>b.confidence-a.confidence).slice(0,2).map(x=>x.name);
+  const summary=stage==="A"?"接近触发，等待确认后执行":stage==="B"?"设预警，等待价格进入计划区":stage==="C"?"继续观察，暂不占用风险预算":"无位置优势，禁止追价";
+  const payload={symbol,timeframe,bar_ts:bar[0],direction,score,stage,rr,consensus,location,trust:trustQ,regime_fit:regimeFit,conflict,price,entry:plan?.entry||null,stop:plan?.stop||null,target:plan?.target||null,trigger:plan?.trigger||null,invalid:plan?.invalid||null,top_experts:top,opposing_experts:opp,summary};
+  const id=idSafe("opp|"+symbol+"|"+timeframe+"|"+bar[0]);
+  await env.DB.prepare("INSERT OR REPLACE INTO opportunity_snapshots(id,symbol,timeframe,bar_ts,created_at,direction,score,stage,rr,consensus,location_score,trust_score,regime_fit,conflict,entry,stop,target,trigger_text,invalid_text,top_experts,opposing_experts,summary,payload_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .bind(id,symbol,timeframe,bar[0],now(),direction,score,stage,rr,consensus,location,trustQ,regimeFit,conflict,plan?.entry||null,plan?.stop||null,plan?.target||null,plan?.trigger||null,plan?.invalid||null,JSON.stringify(top),JSON.stringify(opp),summary,JSON.stringify(payload)).run();
+  return payload;
+}
 async function runScope(env,symbol,timeframe){
   const candles=await fetchCandles(symbol,timeframe),funding=await fetchFunding(symbol),lastBar=candles.at(-1),key="last_bar:"+symbol+":"+timeframe,last=+(await getState(env,key)||0);let closed=0;
   if(last)for(const bar of candles.filter(x=>x[0]>last))closed+=await processBar(env,symbol,timeframe,bar);
-  const analysis=analyzeExperts(candles,funding),created=await sealSignals(env,symbol,timeframe,lastBar,analysis);
+  const analysis=analyzeExperts(candles,funding);await cacheOpportunity(env,symbol,timeframe,lastBar,analysis);const created=await sealSignals(env,symbol,timeframe,lastBar,analysis);
   await stateStmt(env,key,lastBar[0]).run();return{created,closed};
 }
 export async function runArena(env){
@@ -114,8 +138,12 @@ async function leaderboard(env,url){
 async function route(req,env){
   const url=new URL(req.url),p=url.pathname;if(req.method==="OPTIONS")return new Response(null,{status:204,headers:cors(env)});
   if(p==="/health")return json(env,{ok:true,service:"ev-desk-arena",time:now()});
-  if(p==="/api/v1/arena/meta"){const head=await getState(env,"chain_head"),last=await getState(env,"last_run"),counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM signals) signals,(SELECT COUNT(*) FROM trades) trades,(SELECT COUNT(*) FROM signals WHERE status='active') active,(SELECT COUNT(*) FROM signals WHERE status='pending') pending").first();return json(env,{scope:"server_forward_only",source:env.ARENA_SOURCE||"public market data",chain_head:head,last_run:last?JSON.parse(last):null,...counts});}
+  if(p==="/api/v1/arena/meta"){const head=await getState(env,"chain_head"),last=await getState(env,"last_run"),counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM signals) signals,(SELECT COUNT(*) FROM trades) trades,(SELECT COUNT(*) FROM signals WHERE status='active') active,(SELECT COUNT(*) FROM signals WHERE status='pending') pending,(SELECT COUNT(*) FROM opportunity_snapshots) opportunity_snapshots").first();return json(env,{scope:"server_forward_only",source:env.ARENA_SOURCE||"public market data",chain_head:head,last_run:last?JSON.parse(last):null,...counts});}
   if(p==="/api/v1/arena/leaderboard")return json(env,{scope:"server_forward_only",items:await leaderboard(env,url)});
+  if(p==="/api/v1/arena/opportunities"){const symbol=url.searchParams.get("symbol"),tf=url.searchParams.get("timeframe"),where=[],bind=[];if(symbol){where.push("o.symbol=?");bind.push(symbol);}if(tf){where.push("o.timeframe=?");bind.push(tf);}
+    let sql="SELECT o.* FROM opportunity_snapshots o JOIN (SELECT symbol,timeframe,MAX(bar_ts) bar_ts FROM opportunity_snapshots GROUP BY symbol,timeframe) m ON o.symbol=m.symbol AND o.timeframe=m.timeframe AND o.bar_ts=m.bar_ts";
+    if(where.length)sql+=" WHERE "+where.join(" AND ");sql+=" ORDER BY o.score DESC,o.created_at DESC LIMIT 500";const q=env.DB.prepare(sql),r=await (bind.length?q.bind(...bind):q).all();
+    return json(env,{scope:"latest_server_cache",generated_at:now(),items:(r.results||[]).map(x=>{try{return JSON.parse(x.payload_json)}catch(e){return x;}})});}
   if(p==="/api/v1/arena/positions"){const r=await env.DB.prepare("SELECT s.*,e.name,e.school FROM signals s JOIN experts e ON e.id=s.expert_id WHERE s.status IN ('pending','active') ORDER BY s.created_at DESC LIMIT 500").all();return json(env,{items:r.results||[]});}
   if(p==="/api/v1/arena/ledger"){const limit=clampInt(url.searchParams.get("limit"),1,500,100),r=await env.DB.prepare("SELECT t.*,e.name,e.school FROM trades t JOIN experts e ON e.id=t.expert_id ORDER BY t.closed_bar_ts DESC LIMIT ?").bind(limit).all();return json(env,{items:r.results||[]});}
   if(p.startsWith("/api/v1/arena/experts/")){const id=decodeURIComponent(p.split("/").pop()),e=EXPERTS.find(x=>x.id===id||x.name===id);if(!e)return json(env,{error:"expert not found"},404);const t=(await env.DB.prepare("SELECT * FROM trades WHERE expert_id=? ORDER BY closed_bar_ts ASC LIMIT 2000").bind(e.id).all()).results||[],pos=(await env.DB.prepare("SELECT * FROM signals WHERE expert_id=? AND status IN ('pending','active') ORDER BY created_at DESC").bind(e.id).all()).results||[];return json(env,{expert:e,stats:{...calcStats(t),status:grade(calcStats(t)),trust_multiplier:trust(calcStats(t))},positions:pos,trades:t.slice(-200).reverse()});}
