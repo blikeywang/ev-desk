@@ -89,3 +89,35 @@ CREATE TABLE IF NOT EXISTS arena_runs (
   trades_closed INTEGER NOT NULL DEFAULT 0,
   error_text TEXT
 );
+
+CREATE TABLE IF NOT EXISTS opportunity_snapshots (
+  id TEXT PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  timeframe TEXT NOT NULL,
+  bar_ts INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  direction TEXT NOT NULL,
+  score REAL NOT NULL,
+  stage TEXT NOT NULL,
+  rr REAL NOT NULL,
+  consensus REAL NOT NULL,
+  location_score REAL NOT NULL,
+  trust_score REAL NOT NULL,
+  regime_fit REAL NOT NULL,
+  conflict REAL NOT NULL,
+  entry REAL,
+  stop REAL,
+  target REAL,
+  trigger_text TEXT,
+  invalid_text TEXT,
+  top_experts TEXT,
+  opposing_experts TEXT,
+  summary TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  UNIQUE(symbol,timeframe,bar_ts)
+);
+
+CREATE INDEX IF NOT EXISTS idx_opportunities_latest
+  ON opportunity_snapshots(symbol,timeframe,bar_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_opportunities_rank
+  ON opportunity_snapshots(bar_ts DESC,score DESC);
