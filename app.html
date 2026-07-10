@@ -155,6 +155,17 @@
   .rp-long{background:rgba(46,160,67,.18);color:#4ac26b}.rp-short{background:rgba(229,83,75,.18);color:#f0776f}.rp-neu{background:rgba(110,118,129,.18);color:#adb6c0}
   .cbar2{height:7px;border-radius:5px;background:linear-gradient(90deg,var(--short),#3a3f4b,var(--long));position:relative}
   .cbar2 i{position:absolute;top:-3px;width:3px;height:13px;background:#fff;border-radius:2px}
+  .opp-hero{background:linear-gradient(135deg,rgba(59,130,246,.13),rgba(210,153,34,.06));border:1px solid #3b82f655;border-radius:16px;padding:16px 18px;margin:12px 0}
+  .opp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.opp-title{font-size:20px;font-weight:800}.opp-desc{font-size:12.5px;color:#c9d1d9;max-width:700px;margin-top:3px}
+  .opp-summary{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center;margin-top:14px;background:#0d111788;border:1px solid var(--border);border-radius:12px;padding:12px}
+  .score-ring{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:22px;font-weight:850;background:conic-gradient(var(--accent) calc(var(--score)*1%),var(--panel2) 0);position:relative}
+  .score-ring:after{content:"";position:absolute;inset:7px;background:var(--panel);border-radius:50%}.score-ring b{position:relative;z-index:1}.opp-best{font-weight:750;font-size:15px}.opp-copy{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .opp-list{display:grid;gap:9px;margin-top:12px}.opp-row{display:grid;grid-template-columns:105px 86px 92px minmax(180px,1fr) 82px 90px 72px;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:11px 12px;cursor:pointer}
+  .opp-row:hover{border-color:var(--accent)}.opp-row.head{background:transparent;border:none;color:var(--muted);font-size:10.5px;cursor:default;padding-top:2px;padding-bottom:2px}
+  .opp-grade{font-size:10.5px;font-weight:800;padding:4px 7px;border-radius:999px;text-align:center}.og-a{background:#2ea04322;color:#73d58a}.og-b{background:#3b82f622;color:#75adff}.og-c{background:#d2992222;color:#e3c07a}.og-d{background:#484f5833;color:#adb6c0}
+  .opp-meter{height:6px;background:var(--panel2);border-radius:999px;overflow:hidden;margin-top:4px}.opp-meter i{display:block;height:100%;background:linear-gradient(90deg,var(--warn),var(--accent),var(--long));border-radius:999px}
+  .opp-factors{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}.opp-factor{background:var(--panel2);border-radius:8px;padding:8px;text-align:center;font-size:10.5px;color:var(--muted)}.opp-factor b{display:block;color:var(--txt);font-size:14px}
+  @media(max-width:820px){.opp-summary{grid-template-columns:76px 1fr}.opp-summary>div:last-child{grid-column:1/-1}.opp-row,.opp-row.head{grid-template-columns:1fr 78px 72px}.opp-row>*:nth-child(4),.opp-row>*:nth-child(6){display:none}.opp-factors{grid-template-columns:repeat(2,1fr)}}
   /* 成长/记录 */
   .jrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12.5px}
   .jbtns button{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:4px}
@@ -266,8 +277,11 @@
   </div><!-- /pDesk -->
 
   <div class="page" id="pRadar">
-    <div class="ctrls"><button class="btn primary" id="scanBtn">↻ 扫描自选</button>
-      <span class="vmeta" id="scanStatus">按「赔率 × 共识」排序 · 点行跳到决策台</span></div>
+    <div class="opp-hero"><div class="opp-head"><div><div class="opp-title">今日机会榜</div>
+      <div class="opp-desc">不是预测涨幅，而是从自选池中找出“位置、赔率、专家共识、前瞻可信度与行情适配”同时更完整的计划。低分代表不值得占用风险预算。</div></div>
+      <div class="ctrls" style="margin:0"><select id="oppSort" onchange="setOppSort(this.value)"><option value="score">综合排序</option><option value="location">离触发最近</option><option value="rr">赔率优先</option><option value="consensus">共识优先</option></select>
+        <button class="btn primary" id="scanBtn">↻ 扫描自选</button></div></div>
+      <div id="oppSummary"></div><div class="audit-strip"><span>同日缓存</span><span>失败标的保留</span><span>冲突扣分</span><span>不把分数解释成胜率</span><span id="scanStatus">等待扫描</span></div></div>
     <div id="radarBox" style="margin-top:12px"></div>
   </div>
 
@@ -1694,41 +1708,75 @@ function showPage(p){
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT"];
 function getWatch(){try{return JSON.parse(localStorage.getItem('watch'))||DEFAULT_WATCH;}catch(e){return DEFAULT_WATCH;}}
 function setWatch(a){try{localStorage.setItem('watch',JSON.stringify(a));}catch(e){}}
-let RADAR=[], scanning=false;
+function oppDay(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function loadOppCache(){try{const x=JSON.parse(localStorage.getItem("opportunityCacheV2")||"null");return x&&x.day===oppDay()&&Array.isArray(x.items)?x.items:[];}catch(e){return[];}}
+function saveOppCache(){try{localStorage.setItem("opportunityCacheV2",JSON.stringify({day:oppDay(),savedAt:Date.now(),items:RADAR}));}catch(e){}}
+function oppTrust(name){const r=REMOTE_ARENA&&REMOTE_ARENA.leaderboard&&REMOTE_ARENA.leaderboard.find(x=>x.name===name);return r?+r.trust_multiplier||1:trustMultiplier(name);}
+const oppClamp=x=>Math.max(0,Math.min(1,x));
+let RADAR=loadOppCache(),OPP_SORT="score",scanning=false;
 async function scanRadar(){
   if(scanning)return; scanning=true;
-  const st=document.getElementById('scanStatus'); const list=getWatch().filter(isCrypto); RADAR=[];
+  const st=document.getElementById('scanStatus'),list=getWatch();RADAR=[];renderRadar();
   for(let i=0;i<list.length;i++){const sym=list[i]; st.textContent=`扫描中… ${i}/${list.length} (${sym.replace('USDT','')})`;
     try{const o=await getOHLC(sym); const D=o.data; window.DALL=D; buildLevels(D);
-      const cards=ROSTER.map(fn=>fn()); forwardStep(sym,curTF,D,cards); let nl=0,ns=0; cards.forEach(c=>{const t=dirType(c.dir);if(t==='long')nl++;else if(t==='short')ns++;});
-      const net=nl-ns, price=L.price, a=L.atr4||price*0.01; let dir=net>=2?'long':(net<=-2?'short':'flat'), rr=0;
-      if(dir!=='flat'){let KL=null;try{KL=nearestLv(keyLevels(D["4h"],D["4h"].length-1,a),price);}catch(e){} let stop,tgt;
-        if(dir==='long'){if(KL&&KL.sup&&KL.res&&KL.res.p>price+0.3*a){stop=KL.sup.p-0.4*a;tgt=KL.res.p;}else{stop=price-1.5*a;tgt=price+3*a;}if(stop>=price)stop=price-1.5*a;}
-        else{if(KL&&KL.sup&&KL.res&&KL.sup.p<price-0.3*a){stop=KL.res.p+0.4*a;tgt=KL.sup.p;}else{stop=price+1.5*a;tgt=price-3*a;}if(stop<=price)stop=price+1.5*a;}
-        rr=Math.abs(tgt-price)/Math.abs(price-stop);}
-      RADAR.push({sym,dir,nl,ns,net,rr,price});
-    }catch(e){RADAR.push({sym,err:true});}
+      buildConfluenceMap();const cards=ROSTER.map(fn=>fn());forwardStep(sym,curTF,D,cards);
+      let nl=0,ns=0,longW=0,shortW=0;const aligned={long:[],short:[]};
+      cards.forEach(c=>{const t=dirType(c.dir),w=(CONFW[c.conf]??.3)*oppTrust(c.name);if(t==="long"){nl++;longW+=w;aligned.long.push({name:c.name,w});}else if(t==="short"){ns++;shortW+=w;aligned.short.push({name:c.name,w});}});
+      const total=longW+shortW,edge=total?Math.abs(longW-shortW)/total:0,dir=(nl+ns<2||edge<.18)?"flat":longW>shortW?"long":"short",price=L.price,a=L.atr4||price*.01;
+      const plans=dir==="flat"?[]:scenarioPlans().filter(x=>x.dir===dir).sort((x,y)=>(y.primary?2:0)-(x.primary?2:0)||y.rr-x.rr),plan=plans[0]||null,rr=plan?plan.rr:0;
+      const distance=plan?Math.abs(price-plan.entry)/a:99,location=plan?oppClamp(1-distance/1.5):0,rrQ=oppClamp((rr-1)/2.2),consensus=edge;
+      const agree=dir==="flat"?[]:aligned[dir].sort((x,y)=>y.w-x.w),trustAvg=agree.length?agree.reduce((s,x)=>s+oppTrust(x.name),0)/agree.length:1,trustQ=oppClamp((trustAvg-.65)/.7);
+      const reg=marketRegime(),regimeFit=dir==="flat"?0:reg.dir==="区间/过渡"?.7:((dir==="long"&&reg.dir==="多头趋势")||(dir==="short"&&reg.dir==="空头趋势"))?1:.35;
+      const conflict=total?Math.min(longW,shortW)/total:1,raw=(consensus*.27+location*.27+rrQ*.23+trustQ*.13+regimeFit*.10)*100-conflict*25;
+      let score=Math.max(0,Math.min(100,raw));if(!plan)score=Math.min(score,35);if(rr&&rr<1.2)score=Math.min(score,45);
+      const stage=plan&&score>=68&&location>=.62&&rr>=1.5?{code:"A",text:"接近触发",action:"等待确认后执行"}:
+        plan&&score>=52&&rr>=1.3?{code:"B",text:"设预警",action:"等价格进入计划区"}:
+        plan&&score>=35?{code:"C",text:"继续观察",action:"暂不占用风险预算"}:{code:"D",text:"无位置优势",action:"禁止追价"};
+      const top=agree.slice(0,3).map(x=>x.name),oppose=(dir==="long"?aligned.short:aligned.long).sort((x,y)=>y.w-x.w).slice(0,2).map(x=>x.name);
+      RADAR.push({sym,tf:curTF,dir,nl,ns,longW,shortW,price,rr,score,stage,location,consensus,trust:trustQ,regimeFit,conflict,regime:reg.dir,vol:reg.vol,
+        entry:plan&&plan.entry,stop:plan&&plan.stop,target:plan&&plan.target,trigger:plan&&plan.trigger,invalid:plan&&plan.invalid,top,oppose,source:o.name,scannedAt:Date.now()});
+    }catch(e){RADAR.push({sym,tf:curTF,err:true,error:e&&e.message||String(e),scannedAt:Date.now()});}
+    saveOppCache();renderRadar();
   }
-  RADAR.sort((x,y)=>radScore(y)-radScore(x));
-  st.textContent='完成 · '+new Date().toLocaleTimeString()+' · 点行跳决策台';
-  scanning=false; renderRadar(); reload();  // 恢复当前决策台
+  st.textContent='完成 '+new Date().toLocaleTimeString()+' · 已缓存 '+RADAR.length+' 个标的';
+  scanning=false;saveOppCache();renderRadar();await reload();
 }
-function radScore(r){if(r.err||r.dir==='flat')return -1;return Math.abs(r.net)*Math.min(r.rr,4);}
+function setOppSort(v){OPP_SORT=v;renderRadar();}
+function sortedOpps(){const a=RADAR.slice(),key=OPP_SORT==="location"?"location":OPP_SORT==="rr"?"rr":OPP_SORT==="consensus"?"consensus":"score";return a.sort((x,y)=>(y.err?-1:(+y[key]||0))-(x.err?-1:(+x[key]||0)));}
+function oppClass(code){return code==="A"?"og-a":code==="B"?"og-b":code==="C"?"og-c":"og-d";}
 function renderRadar(){
-  const box=document.getElementById('radarBox');
-  if(!RADAR.length){box.innerHTML='<div class="col empty">点上方「扫描自选」开始——浏览器逐个直连交易所、跑完整评审团+EV，约几秒。</div>';return;}
-  box.innerHTML=RADAR.map(r=>{
-    if(r.err)return `<div class="rrow" style="opacity:.5"><span class="rs">${r.sym.replace('USDT','')}</span><span class="rmini">获取失败</span><span></span><span></span><span></span></div>`;
-    const dc=r.dir==='long'?'rp-long':r.dir==='short'?'rp-short':'rp-neu', dt=r.dir==='long'?'▲做多':r.dir==='short'?'▼做空':'●观望';
-    const pct=Math.max(2,Math.min(98,((r.net/8)*0.5+0.5)*100));
-    return `<div class="rrow" onclick="gotoSym('${r.sym}')">
-      <div><div class="rs">${r.sym.replace('USDT','')}</div><div class="rmini">${fmt(r.price)}</div></div>
-      <div><div class="cbar2"><i style="left:${pct}%"></i></div><div class="rmini" style="margin-top:5px">共识 ${r.nl}多 / ${r.ns}空</div></div>
-      <span class="rpill ${dc}">${dt}</span>
-      <span style="text-align:right">${r.dir!=='flat'?'赔率 1:'+r.rr.toFixed(1):'—'}</span>
-      <span style="text-align:right;color:var(--accent)">看 ›</span></div>`;
-  }).join('');
+  const box=document.getElementById('radarBox'),summary=document.getElementById("oppSummary"),items=sortedOpps();
+  if(!RADAR.length){summary.innerHTML='<div class="demoflag">扫描后会生成当日机会缓存。分数衡量计划完整度，不是上涨概率或保证收益。</div>';box.innerHTML='<div class="col empty">点击「扫描自选」——系统会把每个标的交给完整评审团、位置地图和EV门控，再从高到低排序。</div>';return;}
+  const best=items.find(x=>!x.err&&x.stage&&x.stage.code!=="D");
+  summary.innerHTML=best?`<div class="opp-summary"><div class="score-ring" style="--score:${best.score.toFixed(0)}"><b>${best.score.toFixed(0)}</b></div>
+    <div><div class="opp-best">当前首选：${best.sym.replace("USDT","")} · ${best.stage.text}</div><div class="opp-copy">${best.dir==="long"?"多头":"空头"}计划，赔率 1:${best.rr.toFixed(1)}；${best.stage.action}。支持专家：${best.top.join("、")||"共识不足"}。</div></div>
+    <div><button class="btn primary" onclick="openOpportunity('${best.sym}')">查看行动卡</button></div></div>`:
+    '<div class="demoflag">今日自选池暂无同时通过方向、位置和赔率门槛的机会。空仓也是有效决策。</div>';
+  const head='<div class="opp-row head"><span>标的</span><span>等级/分数</span><span>方向</span><span>当前动作</span><span>赔率</span><span>共识</span><span></span></div>';
+  box.innerHTML='<div class="opp-list">'+head+items.map(r=>{
+    if(r.err)return `<div class="opp-row" style="opacity:.55"><div><b>${r.sym.replace("USDT","")}</b><div class="rmini">${r.tf}</div></div><span class="opp-grade og-d">失败</span><span>—</span><span>${r.error||"数据获取失败"}</span><span>—</span><span>—</span><span></span></div>`;
+    const dc=r.dir==="long"?"rp-long":r.dir==="short"?"rp-short":"rp-neu",dt=r.dir==="long"?"▲ 多":r.dir==="short"?"▼ 空":"● 观望";
+    return `<div class="opp-row" onclick="openOpportunity('${r.sym}')"><div><b>${r.sym.replace("USDT","")}</b><div class="rmini">${fmt(r.price)} · ${r.tf}</div></div>
+      <div><span class="opp-grade ${oppClass(r.stage.code)}">${r.stage.code} · ${r.stage.text}</span><div class="opp-meter"><i style="width:${r.score.toFixed(0)}%"></i></div></div>
+      <span class="rpill ${dc}">${dt}</span><div><b>${r.stage.action}</b><div class="rmini">${r.trigger||"等待新结构"}</div></div>
+      <span class="metric">${r.rr?"1:"+r.rr.toFixed(1):"—"}</span><span class="metric">${(r.consensus*100).toFixed(0)}%</span><span style="text-align:right;color:var(--accent)">行动卡 ›</span></div>`;}).join("")+'</div>';
 }
+function openOpportunity(sym){
+  const r=RADAR.find(x=>x.sym===sym),el=document.getElementById("modal");if(!r||r.err)return;
+  const dc=r.dir==="long"?"#73d58a":r.dir==="short"?"#f0776f":"#adb6c0",brief=`${r.sym.replace("USDT","")} ${r.tf}｜${r.stage.code}级 ${r.stage.text}｜综合${r.score.toFixed(0)}｜${r.dir==="long"?"做多":r.dir==="short"?"做空":"观望"}｜进${fmt(r.entry)} 损${fmt(r.stop)} 目标${fmt(r.target)}｜RR 1:${r.rr.toFixed(1)}｜触发：${r.trigger||"等待"}`;
+  el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>${r.sym.replace("USDT","")} · 下单前行动卡</h3>
+    <div class="ctx">${r.tf} · ${r.source} · 扫描 ${new Date(r.scannedAt).toLocaleString()} · 分数不是胜率</div>
+    <div class="ev-top"><div class="ev-dir" style="color:${dc}">${r.dir==="long"?"▲ 多头计划":r.dir==="short"?"▼ 空头计划":"● 不下单"}</div><span class="opp-grade ${oppClass(r.stage.code)}">${r.stage.code}级 · ${r.stage.text} · ${r.score.toFixed(0)}分</span></div>
+    <div class="opp-factors"><div class="opp-factor"><b>${(r.location*100).toFixed(0)}</b>位置</div><div class="opp-factor"><b>${r.rr?r.rr.toFixed(1):"—"}</b>赔率</div><div class="opp-factor"><b>${(r.consensus*100).toFixed(0)}%</b>共识</div><div class="opp-factor"><b>${(r.trust*100).toFixed(0)}</b>可信度</div><div class="opp-factor"><b>${(r.regimeFit*100).toFixed(0)}</b>行情适配</div></div>
+    ${r.entry?`<div class="ev-chips"><div class="ev-chip"><div class="kk">计划进场</div><div class="vv">${fmt(r.entry)}</div></div><div class="ev-chip"><div class="kk">结构止损</div><div class="vv">${fmt(r.stop)}</div></div><div class="ev-chip"><div class="kk">目标区</div><div class="vv">${fmt(r.target)}</div></div></div>`:""}
+    <div class="plan-line" style="margin-top:12px"><b>现在做什么：</b>${r.stage.action}</div><div class="plan-line"><b>触发：</b>${r.trigger||"暂无完整触发"}</div><div class="plan-line"><b>失效：</b>${r.invalid||"结构尚未形成"}</div>
+    <div class="plan-line"><b>支持证据：</b>${r.top.join("、")||"无稳定专家共识"} · ${r.regime} · ${r.vol}</div><div class="plan-line"><b>反对/风险：</b>${r.oppose.length?r.oppose.join("、")+"持反向意见":"无主要反向专家"}；冲突扣分 ${(r.conflict*100).toFixed(0)}%</div>
+    <div class="ev-act"><button class="ev-cta" onclick="gotoSym('${r.sym}');closeDetail()">进入完整决策台</button><button class="ev-cta ghost" onclick="saveOppAlert('${r.sym}')">保存到等待清单</button><button class="ev-cta ghost" onclick="copyOppBrief('${encodeURIComponent(brief)}')">复制摘要</button></div>
+    <div class="demoflag">机会分只用于排序计划完整度：27%共识 + 27%位置 + 23%赔率 + 13%专家前瞻可信度 + 10%行情适配，再扣除多空冲突。它不等于胜率、收益率或投资建议。</div>`;
+  el.classList.add("on");
+}
+function saveOppAlert(sym){try{const a=JSON.parse(localStorage.getItem("opportunityAlerts")||"[]"),r=RADAR.find(x=>x.sym===sym);if(r&&!a.some(x=>x.sym===sym&&x.day===oppDay()))a.push({sym,day:oppDay(),tf:r.tf,trigger:r.trigger,entry:r.entry,createdAt:Date.now()});localStorage.setItem("opportunityAlerts",JSON.stringify(a));alert("已保存到今日等待清单：条件未满足前不追价。");}catch(e){}}
+function copyOppBrief(x){const s=decodeURIComponent(x);if(navigator.clipboard)navigator.clipboard.writeText(s);else prompt("复制摘要",s);}
 function gotoSym(sym){curSym=sym;const sel=document.getElementById('symsel');if(sel)sel.value=sym;showPage('desk');reload();}
 // ---- 交易日志 & 成长 ----
 function getJournal(){try{return JSON.parse(localStorage.getItem('journal'))||[];}catch(e){return[];}}
