@@ -282,6 +282,7 @@
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeDetail()"><div class="sheet"></div></div>
 
+<script src="config.js"></script>
 <script>
 "use strict";
 /* ============ 真实回测战绩(由 build_stats.py 生成) ============ */
@@ -1533,8 +1534,49 @@ function trustMultiplier(name){
   return Math.max(.65,Math.min(1.35,1+reliability*s.ev*.42-reliability*ddPenalty*.16));
 }
 function growthMark(s){if(s.growth==null)return {txt:"收集中",cls:"grow-flat"};if(s.growth>.08)return {txt:"↑ "+s.growth.toFixed(2)+"R",cls:"grow-up"};if(s.growth<-.08)return {txt:"↓ "+Math.abs(s.growth).toFixed(2)+"R",cls:"grow-down"};return {txt:"→ 稳定",cls:"grow-flat"};}
+let REMOTE_ARENA=null,REMOTE_LOADING=false,REMOTE_ERROR="";
+function arenaApiBase(){return String(window.EV_DESK_CONFIG&&window.EV_DESK_CONFIG.arenaApi||"").replace(/\/$/,"");}
+async function arenaGet(path){const r=await fetch(arenaApiBase()+path,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error("Arena API "+r.status);return await r.json();}
+async function refreshRemoteArena(){
+  const base=arenaApiBase();if(!base||REMOTE_LOADING)return;REMOTE_LOADING=true;REMOTE_ERROR="";
+  try{const [meta,board,pos]=await Promise.all([arenaGet("/api/v1/arena/meta"),arenaGet("/api/v1/arena/leaderboard"),arenaGet("/api/v1/arena/positions")]);
+    REMOTE_ARENA={meta,leaderboard:board.items||[],positions:pos.items||[],loadedAt:Date.now()};}
+  catch(e){REMOTE_ERROR=e&&e.message||String(e);REMOTE_ARENA=null;}
+  finally{REMOTE_LOADING=false;if(document.getElementById("pArena").classList.contains("on"))renderExpertArena();}
+}
+const remoteGrade=x=>({warming_up:["热身中","g-warm"],observing:["观察期","g-watch"],forward_valid:["前瞻有效","g-good"],downweighted:["降权观察","g-bad"],stable:["基本稳定","g-watch"]}[x]||["收集中","g-warm"]);
+function renderRemoteArena(box){
+  const A=REMOTE_ARENA,m=A.meta||{},rows=A.leaderboard||[],pos=A.positions||[];
+  const leader=rows.map(x=>{const g=remoteGrade(x.status),gr=x.growth==null?{t:"收集中",c:"grow-flat"}:x.growth>.08?{t:"↑ "+x.growth.toFixed(2)+"R",c:"grow-up"}:x.growth<-.08?{t:"↓ "+Math.abs(x.growth).toFixed(2)+"R",c:"grow-down"}:{t:"→ 稳定",c:"grow-flat"};
+    return `<div class="leader-row" onclick="openRemoteExpert('${x.id}')"><div><div class="expert-name">${x.name}</div><div class="expert-meta">${x.school} · ${x.open_plans||0} 个进行中</div></div>
+      <span class="grade ${g[1]}">${g[0]}</span><span class="metric">${x.n}</span><span class="metric" style="color:${x.ev>=0?"#73d58a":"#f0776f"}">${x.n?(x.ev>=0?"+":"")+x.ev.toFixed(2):"—"}R</span>
+      <span class="metric">${x.n?x.win_rate.toFixed(0)+"%":"—"}</span><span class="metric ${gr.c}">${gr.t}</span><span class="metric">${(+x.trust_multiplier||1).toFixed(2)}x</span></div>`;}).join("");
+  const opens=pos.slice(0,12).map(p=>`<span class="open-card"><b>${p.name||p.expert_id}</b> · ${p.symbol.replace("USDT","")} ${p.timeframe} · ${p.status==="active"?"已成交":"等触发"} · ${p.direction==="long"?"多":"空"}</span>`).join("");
+  const last=m.last_run,head=m.chain_head?m.chain_head.slice(0,12)+"…":"尚无链头";
+  box.innerHTML=`<div class="arena-hero"><div class="arena-head"><div><div class="arena-title">24小时公共专家赛场 <span class="grade g-good">服务器验证</span></div>
+    <div class="arena-desc">所有用户看到同一套封存时间、统一K线和结算结果。每条信号与交易进入连续哈希链，可用公开 proof API 检查记录是否属于当前账本。</div></div>
+    <div style="display:flex;gap:7px"><button class="btn primary" onclick="refreshRemoteArena()">刷新公共榜</button><button class="btn" onclick="navigator.clipboard&&navigator.clipboard.writeText('${m.chain_head||""}')">复制链头</button></div></div>
+    <div class="arena-kpis"><div class="arena-kpi"><b>${m.signals||0}</b><span>公共封存信号</span></div><div class="arena-kpi"><b>${m.trades||0}</b><span>已结算前瞻交易</span></div>
+      <div class="arena-kpi"><b>${m.active||0}</b><span>模拟持仓</span></div><div class="arena-kpi"><b>${m.pending||0}</b><span>等待触发</span></div></div>
+    <div class="audit-strip"><span>服务器统一时钟</span><span>每5分钟扫描</span><span>成本 0.10%</span><span>同根先止损</span><span>链头 ${head}</span><span>${last?"最近任务 "+last.status:"等待首次任务"}</span></div></div>
+    <div class="arena-open"><b>公共赛场进行中</b><div style="margin-top:7px">${opens||'<span class="vmeta">暂无公共进行中计划。</span>'}</div></div>
+    <div class="leader"><div class="leader-row head"><span>专家</span><span>状态</span><span class="metric">样本</span><span class="metric">前瞻EV</span><span class="metric">胜率</span><span class="metric">近期变化</span><span class="metric">权重</span></div>${leader}</div>
+    <div class="demoflag">审计边界：哈希链能帮助发现账本内记录被静默修改，但它不是区块链。正式付费版应定期把链头签名发布到独立位置，防止整库替换。</div>`;
+}
+async function openRemoteExpert(id){
+  const el=document.getElementById("modal");el.querySelector(".sheet").innerHTML='<div class="ctx">加载公共前瞻档案…</div>';el.classList.add("on");
+  try{const d=await arenaGet("/api/v1/arena/experts/"+encodeURIComponent(id)),s=d.stats||{},e=d.expert||{},T=d.trades||[],P=d.positions||[],g=remoteGrade(s.status);
+    const ledger=T.slice(0,20).map(t=>`<tr><td>${new Date(t.closed_bar_ts*1000).toLocaleDateString()}</td><td>${t.symbol.replace("USDT","")} · ${t.timeframe}</td><td>${t.direction==="long"?"多":"空"}</td><td style="color:${t.net_r>=0?"#73d58a":"#f0776f"}">${t.net_r>=0?"+":""}${(+t.net_r).toFixed(2)}R</td><td>${t.close_reason}</td></tr>`).join("");
+    el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>${e.name||id} · 公共前瞻档案</h3><div class="ctx">${e.school||""} · 服务器统一账本 · 可信权重 ${(+s.trust_multiplier||1).toFixed(2)}x</div>
+      <div class="kpis"><div class="kpi"><div class="n">${s.n||0}</div><div class="l">前瞻样本</div></div><div class="kpi"><div class="n" style="color:${s.ev>=0?"#73d58a":"#f0776f"}">${s.n?(s.ev>=0?"+":"")+s.ev.toFixed(2):"—"}R</div><div class="l">每笔EV</div></div>
+      <div class="kpi"><div class="n">${s.n?s.win_rate.toFixed(0)+"%":"—"}</div><div class="l">胜率</div></div><div class="kpi"><div class="n">${s.n?s.max_drawdown_r.toFixed(1):"—"}R</div><div class="l">最大回撤</div></div></div>
+      <div class="ctx"><span class="grade ${g[1]}">${g[0]}</span>　公共进行中计划 ${P.length} 个</div>
+      ${s.curve&&s.curve.length?`<div class="ctx">公共累计R曲线</div>${curveSVG(s.curve)}`:'<div class="demoflag">仍在积累公共前瞻样本。</div>'}
+      <table class="ledger"><tr><th>结算</th><th>市场</th><th>方向</th><th>结果</th><th>原因</th></tr>${ledger||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">暂无结算记录</td></tr>'}</table>`;
+  }catch(e){el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><div class="demoflag">公共档案加载失败：${e&&e.message||e}</div>`;}
+}
 function renderExpertArena(){
-  const box=document.getElementById("arenaBox"),lab=loadLab(),names=ROSTER.map(fn=>{try{return fn().name}catch(e){return null}}).filter(Boolean);
+  const box=document.getElementById("arenaBox");if(REMOTE_ARENA){renderRemoteArena(box);return;}const lab=loadLab(),names=ROSTER.map(fn=>{try{return fn().name}catch(e){return null}}).filter(Boolean);
   const sealed=lab.trades.length+lab.positions.length+lab.canceled.length,active=lab.positions.filter(x=>x.status==="active").length,pending=lab.positions.filter(x=>x.status==="pending").length;
   const rows=names.map(name=>({name,s:forwardStats(name),mult:trustMultiplier(name)})).sort((a,b)=>(b.s.n?b.s.ev*b.s.n/(b.s.n+20):-9)-(a.s.n?a.s.ev*a.s.n/(a.s.n+20):-9));
   const leader=rows.map(x=>{const g=expertGrade(x.s),gm=growthMark(x.s),cur=lab.positions.filter(p=>p.expert===x.name).length;
@@ -1542,7 +1584,8 @@ function renderExpertArena(){
       <span class="grade ${g.cls}">${g.txt}</span><span class="metric">${x.s.n}</span><span class="metric" style="color:${x.s.ev>=0?"#73d58a":"#f0776f"}">${x.s.n?(x.s.ev>=0?"+":"")+x.s.ev.toFixed(2):"—"}R</span>
       <span class="metric">${x.s.n?x.s.win.toFixed(0)+"%":"—"}</span><span class="metric ${gm.cls}">${gm.txt}</span><span class="metric">${x.mult.toFixed(2)}x</span></div>`;}).join("");
   const opens=lab.positions.slice(-10).map(p=>`<span class="open-card"><b>${p.expert}</b> · ${p.sym.replace("USDT","")} ${p.tf} · ${p.status==="active"?"已成交":"等触发"} · ${p.dir==="long"?"多":"空"}</span>`).join("");
-  box.innerHTML=`<div class="arena-hero"><div class="arena-head"><div><div class="arena-title">专家前瞻赛场</div>
+  const remoteNote=arenaApiBase()?`<div class="demoflag">${REMOTE_LOADING?"正在连接24小时公共赛场…":"公共赛场连接失败："+(REMOTE_ERROR||"未知错误")+"；当前显示本地降级账本。"}</div>`:"";
+  box.innerHTML=remoteNote+`<div class="arena-hero"><div class="arena-head"><div><div class="arena-title">专家前瞻赛场</div>
     <div class="arena-desc">只统计启用后的新K线。每个计划先封存再结算，失败单不可回删；同根同时碰止损和目标时先记止损。专家的成长是识别适用行情并校准可信权重，不是修改历史。</div></div>
     <div style="display:flex;gap:7px"><button class="btn ${lab.enabled?"":"primary"}" onclick="toggleLab()">${lab.enabled?"暂停赛场":"启动赛场"}</button><button class="btn" onclick="toggleAdaptive()">动态权重 ${lab.adaptive?"开":"关"}</button><button class="btn" onclick="exportLab()">导出审计账本</button></div></div>
     <div class="arena-kpis"><div class="arena-kpi"><b>${sealed}</b><span>累计封存信号</span></div><div class="arena-kpi"><b>${lab.trades.length}</b><span>已结算前瞻交易</span></div>
@@ -1584,6 +1627,7 @@ async function refresh(){
     CARDS=ROSTER.map(fn=>fn());
     forwardStep(curSym,curTF,ohlc.data,CARDS);
     ensureState(); renderLevels(ohlc.name); renderCards(); recompute();
+    if(arenaApiBase())refreshRemoteArena();
     document.getElementById("tfLabel").textContent=curTF;
     setStatus("ok",`数据就绪 · ${curTF} · OHLC@${ohlc.name}`+(fund?` · 费率@${fund.src}`:` · 费率不可用`));
   }catch(e){
@@ -1644,7 +1688,7 @@ function showPage(p){
   const map={desk:'pDesk',radar:'pRadar',arena:'pArena',growth:'pGrowth',me:'pMe'};
   for(const k in map){document.getElementById(map[k]).classList.toggle('on',k===p);document.getElementById('nav-'+k).classList.toggle('on',k===p);}
   const f=document.getElementById('deskFoot'); if(f)f.style.display=p==='desk'?'':'none';
-  if(p==='radar')renderRadar(); if(p==='arena')renderExpertArena(); if(p==='growth')renderGrowth(); if(p==='me')renderMe();
+  if(p==='radar')renderRadar(); if(p==='arena'){renderExpertArena();refreshRemoteArena();} if(p==='growth')renderGrowth(); if(p==='me')renderMe();
 }
 // ---- 自选 & 雷达 ----
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT"];
