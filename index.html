@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>正EV决策台 · 别信大师，信你自己的评审团</title>
+<meta name="description" content="多流派评审团 + 正EV修正 + 真实战绩。不预测涨跌，帮你提高赔率、及时止损、看得见自己成长。分析工具，非投资建议。">
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--panel2:#1c2230;--border:#2a3240;--txt:#e6edf3;--muted:#8b949e;
+    --long:#2ea043;--long2:#4ac26b;--short:#e5534b;--short2:#f0776f;--warn:#d29922;--accent:#3b82f6;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .top{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+  .logo{font-weight:800;font-size:17px}
+  .logo b{color:var(--long2)}
+  .cta{background:var(--accent);color:#fff;font-weight:700;padding:9px 18px;border-radius:10px;font-size:14px;display:inline-block}
+  .cta.big{padding:14px 26px;font-size:16px}
+  .cta.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--border)}
+  section{padding:44px 0;border-bottom:1px solid var(--border)}
+  h1{font-size:38px;line-height:1.25;margin:8px 0 14px;font-weight:800}
+  h1 .hl{color:var(--long2)} h1 .hl2{color:var(--short2)}
+  .sub{font-size:17px;color:#c9d1d9;max-width:640px}
+  .btns{margin-top:26px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .note{color:var(--muted);font-size:13px}
+  h2{font-size:24px;margin:0 0 6px}
+  .lead{color:var(--muted);margin:0 0 20px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:720px){.cards{grid-template-columns:1fr}h1{font-size:30px}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .card .ic{font-size:22px}.card h3{margin:8px 0 6px;font-size:16px}.card p{margin:0;color:#c9d1d9;font-size:14px}
+  /* 洞察条 */
+  .insight{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .bars{display:grid;grid-template-columns:64px 1fr 74px 78px;gap:8px 10px;align-items:center;font-size:13px;margin-top:12px}
+  .bars .h{color:var(--muted);font-size:12px}
+  .track{background:var(--panel2);border-radius:6px;height:18px;overflow:hidden}
+  .track>i{display:block;height:100%;background:var(--long)}
+  .flow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .step{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .step .n{color:var(--accent);font-weight:800;font-size:13px}
+  .mkts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .chip{background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:13px;color:#c9d1d9}
+  .disc{background:#2d2418;border:1px solid #5c4a1f;color:#e3c07a;border-radius:12px;padding:14px 16px;font-size:13px;margin-top:20px}
+  footer{padding:26px 0;color:var(--muted);font-size:12.5px;text-align:center}
+  .kpi{font-size:30px;font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo">正<b>EV</b>决策台</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a class="note" href="#join" style="color:var(--muted)">加入等候列表</a>
+      <a class="cta" href="app.html">免费试用 Demo →</a>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section style="border:none">
+    <div class="note">多流派评审团 · 正EV修正 · 真实战绩</div>
+    <h1><span class="hl2">90%</span> 的胜率救不了你，<br><span class="hl">1 : 3.5</span> 的赔率能。</h1>
+    <p class="sub">我们不预测涨跌，也不卖"稳赚信号"。我们把市面上十几种交易流派做成一个<b>评审团</b>，
+       再用一层<b>正EV修正</b>只解决两件让绝大多数人亏钱的事：<b>提高每笔赔率</b>、<b>错了及时止损</b>——
+       并让你<b>看得见自己在变好</b>。</p>
+    <div class="btns">
+      <a class="cta big" href="app.html">进入决策台（免费）</a>
+      <span class="note">无需注册 · 浏览器直连行情 · 分析工具，非投资建议</span>
+    </div>
+  </section>
+
+  <!-- 洞察 -->
+  <section>
+    <h2>为什么"高胜率"是陷阱</h2>
+    <p class="lead">只要死扛亏损，胜率能刷得很好看——但生存能力在崩塌。这是我们对真实数据的回测结论。</p>
+    <div class="insight">
+      <div class="note">固定"赚 +0.5R 就跑"，只放宽止损（越往下=越死扛亏损）· BTC+ETH 4h · 含成本</div>
+      <div class="bars">
+        <div class="h">止损</div><div class="h">胜率（越"漂亮"越危险）</div><div class="h" style="text-align:right">亏/盈倍</div><div class="h" style="text-align:right">最大回撤</div>
+        <div>-1R</div><div class="track"><i style="width:66%"></i></div><div style="text-align:right;color:#7fbf8b">2.4x</div><div style="text-align:right;color:#e5b567">-46R</div>
+        <div>-3R</div><div class="track"><i style="width:87%"></i></div><div style="text-align:right;color:#e08a5e">6.0x</div><div style="text-align:right;color:#e07a5e">-43R</div>
+        <div>-10R</div><div class="track"><i style="width:90%;background:var(--short)"></i></div><div style="text-align:right;color:#e5534b;font-weight:700">9.7x</div><div style="text-align:right;color:#e5534b;font-weight:700">-94R</div>
+      </div>
+      <p style="margin:14px 0 0;font-size:14px">→ 89% 的胜率感觉很爽，实则一波连亏就爆仓。<b>胜率是幻觉，赔率与生存才是真相。</b>
+        我们把每笔的赔率结构从 <span style="color:var(--short2)">0.17:1</span> 掰到 <span style="color:var(--long2)">3.5:1</span>。</p>
+    </div>
+  </section>
+
+  <!-- 三卖点 -->
+  <section>
+    <h2>我们卖的不是预测，是纪律</h2>
+    <p class="lead">这三件事，是绝大多数亏钱交易者的通病。</p>
+    <div class="cards">
+      <div class="card"><div class="ic">🎯</div><h3>赔率体检</h3><p>进场前就算好这笔"值不值"——赔率不够 1.5R，帮你忍住不进。劝退和推荐一样醒目。</p></div>
+      <div class="card"><div class="ic">🛡️</div><h3>止损护栏</h3><p>错了第一时间走，把每笔亏损锁在小数，杜绝一次爆仓。自动按你的风险算好仓位。</p></div>
+      <div class="card"><div class="ic">📈</div><h3>成长系统</h3><p>记录你每一笔，量化"砍盈利/扛亏损"的行为偏差，陪你练成正EV的少数人。</p></div>
+    </div>
+  </section>
+
+  <!-- 工作原理 -->
+  <section>
+    <h2>怎么工作的</h2>
+    <div class="flow">
+      <div class="step"><div class="n">01 评审团</div><div>十几位流派高手（趋势/缠论/威科夫/SMC/关键位/情绪…）在对的行情各自发言，按立场分多空。</div></div>
+      <div class="step"><div class="n">02 共识</div><div>看它们一致还是分歧——分歧本身就是信息。你可挑自己信的高手、调权重。</div></div>
+      <div class="step"><div class="n">03 EV体检卡</div><div>给出方向 + 红黄绿灯 + 单笔赔率 + 进场/止损/目标 + 建议仓位，止损贴真实关键位。</div></div>
+      <div class="step"><div class="n">04 成长</div><div>点开每位高手在此标的×周期的真实回测战绩；记录你的交易，长出你的成长曲线。</div></div>
+    </div>
+  </section>
+
+  <!-- 市场 -->
+  <section>
+    <h2>覆盖市场</h2>
+    <p class="lead">一个面板，多市场多周期（1m 到 1d）。</p>
+    <div class="mkts">
+      <span class="chip">加密 BTC/ETH/SOL…</span><span class="chip">美股 AAPL/NVDA/SPY/QQQ</span>
+      <span class="chip">大宗 黄金/原油</span><span class="chip">周期 1m·5m·15m·1h·4h·1d</span>
+    </div>
+    <div style="display:flex;gap:20px;margin-top:22px;flex-wrap:wrap">
+      <div><div class="kpi" style="color:var(--long2)">11</div><div class="note">流派高手</div></div>
+      <div><div class="kpi">6</div><div class="note">时间周期</div></div>
+      <div><div class="kpi">100%</div><div class="note">浏览器端实时回测</div></div>
+    </div>
+    <div style="margin-top:26px"><a class="cta big" href="app.html">开始体验 →</a></div>
+  </section>
+
+  <!-- 等候列表 / 反馈 -->
+  <section id="join">
+    <h2>加入等候列表</h2>
+    <p class="lead">留个邮箱，新功能（多市场预警、完整战绩、DC/TG 社区）上线第一时间通知你。也欢迎告诉我们你最想要什么。</p>
+    <form id="wf" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" onsubmit="return onWait(event)"
+      style="display:flex;gap:10px;flex-wrap:wrap;max-width:560px">
+      <input name="email" type="email" required placeholder="你的邮箱"
+        style="flex:2;min-width:200px;background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:12px 14px;font-size:14px">
+      <input name="want" placeholder="你最想要的功能(可选)"
+        style="flex:2;min-width:200px;background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:12px 14px;font-size:14px">
+      <button class="cta" type="submit" style="border:none;cursor:pointer">加入 →</button>
+    </form>
+    <div id="wmsg" class="note" style="margin-top:10px;color:var(--long2)"></div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+      <a class="cta ghost" id="tgLink" href="#" onclick="return needSetup('Telegram')">💬 Telegram 群</a>
+      <a class="cta ghost" id="dcLink" href="#" onclick="return needSetup('Discord')">🎮 Discord</a>
+      <a class="cta ghost" id="fbLink" href="mailto:your@email.com?subject=正EV决策台反馈">✉️ 反馈建议</a>
+    </div>
+    <div class="note" style="margin-top:10px">数据只用于产品通知与改进，不出售第三方。详见 <a href="tos.html" style="color:var(--accent)">服务条款与隐私</a>。</div>
+  </section>
+
+  <div class="disc">
+    ⚠️ 重要声明：本产品是<b>数据驱动的决策支持与交易教育工具</b>，<b>不是投资建议</b>，不代客户下单或管理资金。
+    所有分析与历史战绩仅供参考，<b>历史表现不代表未来</b>；交易有风险，盈亏与决策由你本人负责。
+  </div>
+</div>
+<footer>正EV决策台 · Demo · 分析工具，非投资建议 · 你的数据本地保存，不上传 · <a href="tos.html" style="color:var(--muted)">服务条款与隐私</a></footer>
+<script>
+async function onWait(e){e.preventDefault();
+  const f=e.target,email=f.email.value,want=f.want.value,msg=document.getElementById('wmsg');
+  const configured=!f.action.includes('YOUR_FORM_ID');
+  if(configured){
+    try{await fetch(f.action,{method:'POST',headers:{Accept:'application/json'},body:new FormData(f)});
+      msg.textContent='✅ 已加入等候列表，谢谢！上线后第一时间通知你。';f.reset();}
+    catch(err){msg.style.color='var(--warn)';msg.textContent='提交失败，请稍后重试或用邮件反馈。';}
+  }else{
+    try{const w=JSON.parse(localStorage.getItem('waitlist')||'[]');w.push({email,want,t:Date.now()});localStorage.setItem('waitlist',JSON.stringify(w));}catch(x){}
+    msg.innerHTML='✅ 已记录（演示：本地保存）。<br><span style="color:var(--muted)">上线前把表单 action 换成你的 Formspree / Tally / Google Forms 端点，即可真正收到报名。</span>';f.reset();
+  }
+  return false;}
+function needSetup(name){alert(name+' 群链接待配置：上线前把该按钮的 href 换成你的邀请链接即可。');return false;}
+</script>
+</body>
+</html>
