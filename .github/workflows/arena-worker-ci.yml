@@ -1,0 +1,32 @@
+name: Arena Worker CI
+
+on:
+  pull_request:
+    paths:
+      - "arena-worker/**"
+      - ".github/workflows/arena-worker-ci.yml"
+  push:
+    branches: [master]
+    paths:
+      - "arena-worker/**"
+      - ".github/workflows/arena-worker-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: arena-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: arena-worker/package-lock.json
+      - run: npm install
+      - run: npm test
+      - run: node --check src/index.js

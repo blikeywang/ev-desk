@@ -1,0 +1,16 @@
+{
+  "name": "ev-desk-arena-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute ev-desk-arena --local --file=schema.sql",
+    "db:remote": "wrangler d1 execute ev-desk-arena --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.24.3"
+  }
+}
