@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
 <title>正EV决策台 · 多流派支撑阻力与进出场分析</title>
 <style>
   :root{
@@ -192,6 +193,17 @@
   .market-context{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;margin:0 0 12px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden}
   .context-cell{min-width:0;background:var(--panel);padding:9px 10px}.context-cell .ck{display:block;color:var(--muted);font-size:10px;margin-bottom:3px}.context-cell .cv{display:block;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.context-cell .cs{display:block;color:var(--muted);font-size:9.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .evidence-line{margin:8px 0;color:var(--muted);font-size:11px}.evidence-line b{color:var(--text)}
+  .training-hero{border:1px solid #3f4958;background:#111820;padding:16px 18px;margin:12px 0 16px;border-radius:8px}
+  .training-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .training-title{font-size:20px;font-weight:800}.training-copy{font-size:12px;color:#c9d1d9;max-width:760px;margin-top:4px}
+  .training-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-top:14px}
+  .training-kpi{background:var(--panel);padding:10px}.training-kpi b{display:block;font-size:19px;font-variant-numeric:tabular-nums}.training-kpi span{font-size:10.5px;color:var(--muted)}
+  .training-section{margin:18px 0}.training-section h3{font-size:15px;margin:0 0 8px}.training-sub{font-size:11px;color:var(--muted);margin:-4px 0 9px}
+  .training-row{display:grid;grid-template-columns:minmax(145px,1.2fr) 90px 90px 90px 90px;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:8px 4px;font-size:11.5px}
+  .training-row.head{font-size:10px;color:var(--muted);padding-top:2px}.training-row .num{text-align:right;font-variant-numeric:tabular-nums}
+  .quality-row{display:grid;grid-template-columns:105px 105px 1fr;gap:10px;border-bottom:1px solid var(--border);padding:8px 4px;font-size:11.5px;align-items:start}
+  .quality-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#c9d1d9}.quality-warn{color:#e3c07a}.quality-info{color:#9fb3c8}
+  @media(max-width:760px){.training-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.training-row{grid-template-columns:minmax(120px,1fr) 72px 72px}.training-row>*:nth-child(4),.training-row>*:nth-child(5){display:none}.quality-row{grid-template-columns:90px 1fr}.quality-row>*:last-child{grid-column:1/-1}}
   @media(max-width:900px){.market-context{grid-template-columns:repeat(3,minmax(0,1fr))}}
   @media(max-width:520px){.market-context{grid-template-columns:repeat(2,minmax(0,1fr))}.context-cell{padding:8px}}
   footer{color:var(--muted);font-size:12px;margin:22px 0 10px;text-align:center}
@@ -211,6 +223,7 @@
     <a id="nav-desk" class="on" onclick="showPage('desk')">📟 决策台</a>
     <a id="nav-radar" onclick="showPage('radar')">📡 雷达</a>
     <a id="nav-arena" onclick="showPage('arena')">🏟️ 专家赛场</a>
+    <a id="nav-training" onclick="showPage('training')">教练档案</a>
     <a id="nav-growth" onclick="showPage('growth')">📈 成长</a>
     <a id="nav-me" onclick="showPage('me')">⚙️ 我的</a>
   </nav>
@@ -294,6 +307,8 @@
 
   <div class="page" id="pArena"><div id="arenaBox"></div></div>
 
+  <div class="page" id="pTraining"><div id="trainingBox"></div></div>
+
   <div class="page" id="pGrowth"><div id="growthBox" style="margin-top:12px"></div></div>
 
   <div class="page" id="pMe"><div id="meBox" style="margin-top:12px"></div></div>
@@ -305,7 +320,14 @@
 
 <script src="data/expert-evidence.js"></script>
 <script src="data/paul-wei-live.js"></script>
+<script src="data/coach-training.js"></script>
+<script src="data/plan-gate-model.js"></script>
 <script src="config.js"></script>
+<script type="module">
+import { analyzeExperts, atr, emaSeries, rsi } from "./arena-worker/src/engine.js";
+window.EV_DESK_COACH_ENGINE={analyzeExperts,atr,emaSeries,rsi};
+window.dispatchEvent(new CustomEvent("ev-desk-coach-engine-ready"));
+</script>
 <script>
 "use strict";
 /* ============ 真实回测战绩(由 build_stats.py 生成) ============ */
@@ -713,6 +735,8 @@ const REALSTATS = (window.EV_DESK_DATA&&window.EV_DESK_DATA.historical) || {
   }
  }
 };
+const COACH_TRAINING=(window.EV_DESK_DATA&&window.EV_DESK_DATA.coachTraining)||null;
+const PLAN_GATE=(window.EV_DESK_DATA&&window.EV_DESK_DATA.planGate)||null;
 function symKey(s){return String(s).replace("USDT","").replace("USD","");}
 /* ============ 工具 & 指标 ============ */
 const fmt=n=>{if(n==null||isNaN(n))return"—";const x=Math.abs(Number(n)),d=x<1?6:x<100?4:x<1000?2:0;
@@ -1066,9 +1090,9 @@ async function refreshPaulFromArena(sym=curSym){
   }catch(e){return false;}
 }
 function ePaulWei(){const feed=paulFeed(),x=paulSnapshot();
-  if(!feed||!x)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`${curSym.replace("USDT","")} 尚无同构1H特征评分文件`],"—","—",["—"],"这是重建行为模型，不是 Paul Wei 本人实时发言；补充结构化数据后才启用。");
+  if(!feed||!x)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`${curSym.replace("USDT","")} 尚无同构1H特征评分文件`,"教师账本与历史行为证据仍可在“教练档案”查看"],"—","—",["—"],"这是重建行为模型，不是 Paul Wei 本人实时发言；补充结构化数据后才启用。");
   const c=x.coaching||{},p=x.action_probs||{},g=c.action_groups||{},e=x.evidence||{},q=new Date(e.query_hour),age=(Date.now()-q.getTime())/3600000;
-  if(!Number.isFinite(q.getTime())||age>3)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`观点文件已过期：${e.query_hour||"未知时点"}`,"过期观点不会进入评审团或前向赛场"],"—","—",["—"],"运行 Paul Wei feed 更新器后自动恢复；禁止把旧观点伪装成实时观点。");
+  if(!Number.isFinite(q.getTime())||age>3)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`观点文件已过期：${e.query_hour||"未知时点"}`,"过期观点不会进入评审团或前向赛场","教师账本与历史行为证据仍可查看"],"—","—",["—"],"运行 Paul Wei feed 更新器后自动恢复；禁止把旧观点伪装成实时观点。");
   const stance=c.stance||"watch",dir=stance==="long_bias"?"偏多(低频条件)":stance==="short_bias"?"偏空(低频条件)":stance==="derisk"?"中性(减风险)":stance==="mixed"?"中性(混合)":"中性(不动)",conf=c.confidence||"低",no=p.no_action||0;
   const reasons=[`无动作概率 ${(no*100).toFixed(1)}%；先回答“是否应该动”，再讨论方向`,`进攻多/空 ${(100*(g.offensive_long||0)).toFixed(1)}% / ${(100*(g.offensive_short||0)).toFixed(1)}%；减多 ${(100*(g.derisk_long||0)).toFixed(1)}%`,`动作语言：${c.suggested_action||"观察"}；风险单位 ${c.suggested_risk_unit||"0R"}`,`${x.market_profile&&x.market_profile.transfer_mode==="native"?"BTC原生行为相似度":"跨资产迁移"} · 评分时点 ${q.toLocaleString()}`];
   const note="方向语言来自 Paul Wei 历史行为重建；下方进出场价位由 EV Desk 独立关键位引擎生成。Sell/减多优先解释为降风险，只有 open_short/add_short/reverse_long_to_short 才属于进攻空头。";
@@ -1239,6 +1263,64 @@ const CONFW={"高":1.0,"中":0.6,"低":0.3,"-":0};
 function dirType(d){if(d.startsWith("偏多")||d.startsWith("做多"))return"long";
   if(d.startsWith("偏空")||d.startsWith("做空"))return"short";
   if(d.startsWith("数据待接入"))return"na";return"neutral";}
+const COACH_EXPERT_IDS=["trend","dow","brooks","wyckoff","chan","smc","ict","levels","volume_profile","avwap","fib","ichimoku","mean_reversion","momentum","grid","sentiment","macro"];
+const COACH_NAME_TO_ID={"老趋势":"trend","道氏":"dow","Brooks":"brooks","威科夫":"wyckoff","缠师":"chan","SMC":"smc","ICT流动性":"ict","关键位":"levels","成交量分布":"volume_profile","锚定VWAP":"avwap","斐波":"fib","一目均衡":"ichimoku","回归":"mean_reversion","因子":"momentum","网格":"grid","情绪":"sentiment","宏观":"macro"};
+const TF_SECONDS={"1m":60,"5m":300,"15m":900,"1h":3600,"4h":14400,"1d":86400};
+const gateClip=(value,low,high)=>Math.max(low,Math.min(high,Number.isFinite(value)?value:0));
+const gateAvg=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:0;
+function gateStd(values){const mean=gateAvg(values);return Math.sqrt(gateAvg(values.map(value=>(value-mean)**2)));}
+function closedPrimaryCandles(){
+  let candles=((window.DALL&&window.DALL["4h"])||[]).map(row=>row.map(Number)).filter(row=>row.length>=6&&row.every(Number.isFinite));
+  const seconds=TF_SECONDS[slots()["4h"]]||3600;
+  if(candles.length&&candles.at(-1)[0]+seconds>Date.now()/1000)candles=candles.slice(0,-1);
+  return candles.slice(-260);
+}
+function coachPlanFeatures(direction,plan){
+  const engine=window.EV_DESK_COACH_ENGINE,candles=closedPrimaryCandles();
+  if(!engine||candles.length<80||!plan||!["long","short"].includes(direction))return null;
+  let analysis;
+  try{analysis=engine.analyzeExperts(candles,{});}catch(e){return null;}
+  const closes=col(candles,4),highs=col(candles,2),lows=col(candles,3),volumes=col(candles,5).map(value=>+value||0);
+  const price=closes.at(-1),current=candles.at(-1),A=engine.atr(candles)||price*.01;
+  const ema20=engine.emaSeries(closes,20).at(-1),ema50=engine.emaSeries(closes,50).at(-1);
+  const rangeHigh=Math.max(...highs.slice(-20)),rangeLow=Math.min(...lows.slice(-20)),range=rangeHigh-rangeLow||A;
+  const recentVolume=volumes.slice(-72),volumeStd=gateStd(recentVolume)||1;
+  const directional=analysis.filter(item=>item.direction==="long"||item.direction==="short");
+  const longs=directional.filter(item=>item.direction==="long"),shorts=directional.filter(item=>item.direction==="short");
+  const longWeight=longs.reduce((sum,item)=>sum+(+item.confidence||.3),0),shortWeight=shorts.reduce((sum,item)=>sum+(+item.confidence||.3),0),totalWeight=longWeight+shortWeight||1;
+  const sign=direction==="long"?1:-1,regime=analysis[0]&&analysis[0].regime||"区间/过渡",date=new Date(+current[0]*1000),risk=Math.abs(plan.entry-plan.stop);
+  const features={
+    direction_sign:sign,rr:gateClip(+plan.rr,0,8),entry_distance_atr:gateClip(Math.abs(plan.entry-price)/A,0,10),risk_atr:gateClip(risk/A,0,10),
+    target_atr:gateClip(Math.abs(plan.target-plan.entry)/A,0,20),atr_pct:gateClip(A/price,0,.25),current_range_atr:gateClip((current[2]-current[3])/A,0,10),
+    close_location:gateClip((price-current[3])/Math.max(1e-12,current[2]-current[3]),0,1),rsi_14:gateClip(engine.rsi(closes)/100,0,1),
+    price_ema20_atr:gateClip((price-ema20)/A,-12,12),price_ema50_atr:gateClip((price-ema50)/A,-20,20),ema_spread_atr:gateClip((ema20-ema50)/A,-12,12),
+    donchian_position:gateClip((price-rangeLow)/range,0,1),return_6:gateClip(price/closes.at(-7)-1,-.5,.5),return_24:gateClip(price/closes.at(-25)-1,-.8,.8),
+    volume_z_72:gateClip((volumes.at(-1)-gateAvg(recentVolume))/volumeStd,-8,12),vote_edge_relative:gateClip(sign*(longWeight-shortWeight)/totalWeight,-1,1),
+    vote_count_for:direction==="long"?longs.length:shorts.length,vote_count_against:direction==="long"?shorts.length:longs.length,
+    regime_aligned:(direction==="long"&&regime==="多头趋势")||(direction==="short"&&regime==="空头趋势")?1:0,
+    regime_counter:(direction==="long"&&regime==="空头趋势")||(direction==="short"&&regime==="多头趋势")?1:0,
+    hour_sin:Math.sin(date.getUTCHours()/24*Math.PI*2),hour_cos:Math.cos(date.getUTCHours()/24*Math.PI*2),weekday_sin:Math.sin(date.getUTCDay()/7*Math.PI*2),weekday_cos:Math.cos(date.getUTCDay()/7*Math.PI*2),
+    symbol_btc:curSym==="BTCUSDT"?1:0,symbol_eth:curSym==="ETHUSDT"?1:0,symbol_nq:curSym==="NQ"?1:0,symbol_es:curSym==="ES"?1:0,
+    timeframe_15m:curTF==="15m"?1:0,timeframe_1h:curTF==="1h"?1:0,timeframe_4h:curTF==="4h"?1:0,
+  };
+  const byId=Object.fromEntries(analysis.map(item=>[item.id,item]));
+  COACH_EXPERT_IDS.forEach(id=>{const vote=byId[id],relative=!vote||!vote.direction?0:vote.direction===direction?1:-1;features[`vote_${id}`]=relative*(+vote?.confidence||0);});
+  return features;
+}
+function scorePlanGate(features){
+  const model=PLAN_GATE&&PLAN_GATE.model;if(!model||!features)return null;
+  let raw=+model.base_log_odds;
+  for(const tree of model.trees||[]){let node=0;while(tree.children_left[node]!==-1){const feature=model.features[tree.feature[node]],value=Number.isFinite(+features[feature])?+features[feature]:0;node=value<=tree.threshold[node]?tree.children_left[node]:tree.children_right[node];}raw+=(+model.learning_rate||0)*tree.value[node];}
+  return raw>=0?1/(1+Math.exp(-raw)):Math.exp(raw)/(1+Math.exp(raw));
+}
+function planGateResult(direction,plan){
+  if(!PLAN_GATE||PLAN_GATE.status!=="accepted_limited")return{available:false,authorized:false,scope:`${curSym}|${curTF}`,reason:"训练门控未启用"};
+  const scope=`${curSym}|${curTF}`,authorized=(PLAN_GATE.deployment&&PLAN_GATE.deployment.scopes||[]).includes(scope);
+  if(!authorized)return{available:true,authorized:false,scope,reason:"该范围未通过验证与留出双重授权"};
+  const features=coachPlanFeatures(direction,plan),probability=scorePlanGate(features),threshold=+((PLAN_GATE.model&&PLAN_GATE.model.threshold)??(PLAN_GATE.selection&&PLAN_GATE.selection.probability_threshold)??.5);
+  if(!Number.isFinite(probability))return{available:false,authorized:true,scope,threshold,reason:"同版专家引擎尚未就绪"};
+  return{available:true,authorized:true,scope,threshold,probability,pass:probability>=threshold,reason:"模型仅可否决现有计划"};
+}
 let state={}, CARDS=[];
 function loadSaved(){try{return JSON.parse(localStorage.getItem("panelStateLive")||"{}")}catch(e){return{}}}
 function save(){try{localStorage.setItem("panelStateLive",JSON.stringify(state))}catch(e){}}
@@ -1287,12 +1369,12 @@ function cardInner(c){
     <label>权重</label><input type="range" min="1" max="5" step="1" value="${st.w}" oninput="setW('${c.name}',this.value)">
     <span class="wval" id="wv-${cssId(c.name)}">${st.w}</span></div>`;
   let mini="";
-  if(!st.na){
-    if(c.name==="Paul Wei 重建"){
-      const cal=paulFeed()&&paulFeed().calibration,a=cal&&cal.active&&cal.active["24h"],body=a&&a.n?`样本外方向校准 <b>${a.n}</b> 次 · 24H命中 <b class="${a.hit_rate>=50?'win':'neg'}">${a.hit_rate}%</b> · 均值 <b>${a.mean_signed_return>=0?'+':''}${(a.mean_signed_return*100).toFixed(2)}%</b>`:`<span style="opacity:.7">行为校准待接入</span>`;
-      mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openPaulEvidence()">证据 ›</span></div>`;
-    }else{const s=statFor(c.name),body=s?`胜率<b class="${s.win>=50?'win':''}">${s.win}%</b> · 期望<b class="${s.ev>=0?'win':'neg'}">${s.ev>=0?'+':''}${s.ev}R</b> · 盈亏比<b>${s.pf}</b> <span style="opacity:.7">(${s.trades}笔)</span>`:`<span style="opacity:.7">回测:该标的/周期待接入</span>`;
-      mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">回测 ›</span></div>`;}}
+  if(c.name==="Paul Wei 重建"){
+    const cal=paulFeed()&&paulFeed().calibration,a=cal&&cal.active&&cal.active["24h"],teacher=COACH_TRAINING&&COACH_TRAINING.paul_wei&&COACH_TRAINING.paul_wei.behavior_labels;
+    const body=a&&a.n?`样本外方向校准 <b>${a.n}</b> 次 · 24H命中 <b class="${a.hit_rate>=50?'win':'neg'}">${a.hit_rate}%</b> · 均值 <b>${a.mean_signed_return>=0?'+':''}${(a.mean_signed_return*100).toFixed(2)}%</b>`:teacher?`教师账本 <b>${teacher.bursts.toLocaleString()}</b> 个行为片段 · 核验 <b>${teacher.verified_by_supplied_xbtusd_ledger.toLocaleString()}</b>`:`<span style="opacity:.7">行为校准待接入</span>`;
+    mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openPaulEvidence()">证据 ›</span></div>`;
+  }else if(!st.na){const s=statFor(c.name),body=s?`胜率<b class="${s.win>=50?'win':''}">${s.win}%</b> · 期望<b class="${s.ev>=0?'win':'neg'}">${s.ev>=0?'+':''}${s.ev}R</b> · 盈亏比<b>${s.pf}</b> <span style="opacity:.7">(${s.trades}笔)</span>`:`<span style="opacity:.7">回测:该标的/周期待接入</span>`;
+    mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">回测 ›</span></div>`;}
   const fs=st.na?null:forwardStats(c.name),fm=fs&&fs.n?`前瞻 ${fs.n}笔 · EV <b style="color:${fs.ev>=0?"#73d58a":"#f0776f"}">${fs.ev>=0?"+":""}${fs.ev.toFixed(2)}R</b>`:"前瞻样本收集中";
   const forward=st.na?"":`<div class="forward-mini"><span>${fm}</span><span class="track" onclick="event.stopPropagation();openExpertLab('${c.name}')">🏟️ 成长 ›</span></div>`;
   return `<span class="selmark">✓ 已选</span>
@@ -1334,19 +1416,35 @@ function curveSVG(curve){
 }
 function evidenceScope(sym,tf){return (REALSTATS.meta&&REALSTATS.meta.scopes||[]).find(x=>x.symbol===sym&&x.timeframe===tf)||null;}
 function evidenceBoundary(){const m=REALSTATS.meta&&REALSTATS.meta.methodology;if(!m)return (REALSTATS.meta&&REALSTATS.meta.note)||"历史表现不代表未来";return `只用已收盘K线 · 挂单${m.pending_expiry_bars}根失效 · 持仓${m.max_hold_bars}根超时 · 同根${m.same_bar_rule==="stop first"?"先止损":"按设定顺序"} · 往返成本${m.round_trip_cost_pct}%`;}
-function openPaulEvidence(){const feed=paulFeed(),x=paulSnapshot(),el=document.getElementById("modal");if(!feed||!x){el.querySelector(".sheet").innerHTML='<span class="closeX" onclick="closeDetail()">✕</span><div class="demoflag">当前标的没有 Paul Wei 同构特征评分文件，不能展示或编造行为证据。</div>';el.classList.add("on");return;}const c=x.coaching||{},p=x.action_probs||{},g=c.action_groups||{},e=x.evidence||{},cal=feed.calibration||{},a=cal.active&&cal.active["24h"]||{},early=cal.stability&&cal.stability.earlier_active_24h||{},late=cal.stability&&cal.stability.later_active_24h||{},examples=(x.similar_examples||[]).slice(0,5).map(r=>`<tr><td>${new Date(r.event_hour).toLocaleDateString()}</td><td>${r.action_type}</td><td>${r.hourly_state||"—"}</td><td>${Number.isFinite(+r.risk_direction_fwd_24h)?(+r.risk_direction_fwd_24h*100).toFixed(1)+"%":"—"}</td></tr>`).join("");
-  const actionRows=Object.entries(p).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`<tr><td>${k}</td><td>${(v*100).toFixed(1)}%</td></tr>`).join("");
-  el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>Paul Wei 重建 · 行为证据</h3>
-    <div class="ctx">${x.market_profile&&x.market_profile.label||curSym} · ${e.query_hour||"—"} · 模型 ${feed.model&&feed.model.version||"—"}</div>
+function coachExpertRecord(name){const id=COACH_NAME_TO_ID[name];return id&&COACH_TRAINING&&COACH_TRAINING.experts&&COACH_TRAINING.experts[id]||null;}
+function openPaulEvidence(){
+  const feed=paulFeed(),x=paulSnapshot(),trained=COACH_TRAINING&&COACH_TRAINING.paul_wei,el=document.getElementById("modal");
+  if(!feed&&!trained){el.querySelector(".sheet").innerHTML='<span class="closeX" onclick="closeDetail()">✕</span><div class="demoflag">Paul Wei 行为证据尚未加载，不能展示或编造结果。</div>';el.classList.add("on");return;}
+  const c=x&&x.coaching||{},p=x&&x.action_probs||{},g=c.action_groups||{},e=x&&x.evidence||{},queryTime=new Date(e.query_hour),liveFresh=!!(x&&Number.isFinite(queryTime.getTime())&&(Date.now()-queryTime.getTime())/3600000<=3),cal=feed&&feed.calibration||{},a=cal.active&&cal.active["24h"]||{},early=cal.stability&&cal.stability.earlier_active_24h||{},late=cal.stability&&cal.stability.later_active_24h||{};
+  const ledger=trained&&trained.public_ledger||{},labels=trained&&trained.behavior_labels||{},groups=labels.action_group_counts||{},outcomes=labels.outcomes||{};
+  const examples=(x&&x.similar_examples||[]).slice(0,5).map(r=>`<tr><td>${new Date(r.event_hour).toLocaleDateString()}</td><td>${r.action_type}</td><td>${r.hourly_state||"—"}</td><td>${Number.isFinite(+r.risk_direction_fwd_24h)?(+r.risk_direction_fwd_24h*100).toFixed(1)+"%":"—"}</td></tr>`).join("");
+  const actionRows=Object.entries(p).sort((left,right)=>right[1]-left[1]).slice(0,6).map(([key,value])=>`<tr><td>${key}</td><td>${(value*100).toFixed(1)}%</td></tr>`).join("");
+  const outcomeNames={open_long:"开多",add_long:"加多",open_short:"开空",add_short:"加空",reduce_long:"减多",reduce_short:"减空"};
+  const outcomeRows=Object.keys(outcomeNames).filter(key=>outcomes[key]).map(key=>{const row=outcomes[key];return `<tr><td>${outcomeNames[key]}</td><td>${row.n.toLocaleString()}</td><td>${row.hit_rate_24h}%</td><td>${row.mean_risk_direction_return_24h>=0?"+":""}${(row.mean_risk_direction_return_24h*100).toFixed(2)}%</td></tr>`;}).join("");
+  const liveBlock=liveFresh?`<div class="ctx" style="margin-top:12px">当前市场行为推断</div>
     <div class="kpis"><div class="kpi"><div class="n">${((p.no_action||0)*100).toFixed(1)}%</div><div class="l">无动作概率</div></div><div class="kpi"><div class="n">${((e.material_action_weight_share||0)*100).toFixed(1)}%</div><div class="l">实质动作概率</div></div><div class="kpi"><div class="n">${a.n||0}</div><div class="l">样本外方向样本</div></div><div class="kpi"><div class="n">${a.hit_rate==null?"—":a.hit_rate+"%"}</div><div class="l">24H方向命中</div></div></div>
     <div class="evidence-line"><b>当前教练语言：</b>${c.suggested_action||"观察"} · ${c.suggested_risk_unit||"0R"} · 进攻多/空 ${((g.offensive_long||0)*100).toFixed(1)}% / ${((g.offensive_short||0)*100).toFixed(1)}%</div>
-    <div class="evidence-line"><b>样本外稳定性：</b>前半段 ${early.n||0} 次、命中 ${early.hit_rate==null?"—":early.hit_rate+"%"}；后半段 ${late.n||0} 次、命中 ${late.hit_rate==null?"—":late.hit_rate+"%"}。这表示环境漂移，不是模型自动成长。</div>
-    <div class="ctx" style="margin-top:12px">动作概率</div><table class="tf-tbl"><tr><th>动作</th><th>概率</th></tr>${actionRows}</table>
-    <div class="ctx" style="margin-top:12px">最相似的历史非观察情境</div><table class="tf-tbl"><tr><th>时间</th><th>动作</th><th>结构</th><th>24H后</th></tr>${examples||'<tr><td colspan="4">暂无</td></tr>'}</table>
-    <div class="demoflag">${feed.model&&feed.model.boundary||"行为相似度评分，不是价格预测。"} 样本外校准只评估方向后的市场变化，不等同可执行PnL；具体进出场由 EV Desk 关键位引擎独立生成。</div>`;el.classList.add("on");}
+    <div class="evidence-line"><b>稳定性：</b>前半段 ${early.n||0} 次、命中 ${early.hit_rate==null?"—":early.hit_rate+"%"}；后半段 ${late.n||0} 次、命中 ${late.hit_rate==null?"—":late.hit_rate+"%"}。这是环境漂移检查，不是自动成长。</div>
+    <table class="tf-tbl"><tr><th>当前动作</th><th>概率</th></tr>${actionRows||'<tr><td colspan="2">当前标的无动作概率</td></tr>'}</table>
+    <div class="ctx" style="margin-top:12px">最相似的历史非观察情境</div><table class="tf-tbl"><tr><th>时间</th><th>动作</th><th>结构</th><th>24H后</th></tr>${examples||'<tr><td colspan="4">暂无</td></tr>'}</table>`:`<div class="demoflag">${x?`实时观点已过期：${e.query_hour||"未知时点"}；过期信号不参与投票。`:"当前标的没有实时 Paul 同构特征快照。"} 教师账本仍可审计。</div>`;
+  el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>Paul Wei 重建 · 教师账本</h3>
+    <div class="ctx">${x&&x.market_profile&&x.market_profile.label||curSym} · 行为模型 ${feed&&feed.model&&feed.model.version||trained&&trained.identity&&trained.identity.skill_version||"—"}</div>
+    <div class="kpis"><div class="kpi"><div class="n">${(+ledger.executions||0).toLocaleString()}</div><div class="l">原始执行</div></div><div class="kpi"><div class="n">${(+ledger.xbtusd_trade_executions||0).toLocaleString()}</div><div class="l">XBTUSD成交</div></div><div class="kpi"><div class="n">${(+labels.bursts||0).toLocaleString()}</div><div class="l">行为片段</div></div><div class="kpi"><div class="n">${(+labels.verified_by_supplied_xbtusd_ledger||0).toLocaleString()}</div><div class="l">账本核验</div></div></div>
+    <div class="evidence-line"><b>教师范围：</b>${ledger.xbtusd_first?new Date(ledger.xbtusd_first).toLocaleDateString():"—"}–${ledger.xbtusd_through?new Date(ledger.xbtusd_through).toLocaleDateString():"—"} · ${(+ledger.orders||0).toLocaleString()} 张订单 · 执行ID重复 ${ledger.duplicate_exec_ids||0}；订单重复 ${ledger.duplicate_order_ids||0} 已保留为质量标记。</div>
+    <div class="evidence-line"><b>动作结构：</b>进攻多 ${(+groups.offensive_long||0).toLocaleString()} · 进攻空 ${(+groups.offensive_short||0).toLocaleString()} · 多头降险 ${(+groups.derisk_long||0).toLocaleString()} · 空头降险 ${(+groups.derisk_short||0).toLocaleString()}。</div>
+    <div class="ctx" style="margin-top:12px">教师动作后的 24H 风险方向观察</div><table class="tf-tbl"><tr><th>动作</th><th>样本</th><th>命中</th><th>均值</th></tr>${outcomeRows||'<tr><td colspan="4">待接入</td></tr>'}</table>
+    ${liveBlock}
+    <div class="demoflag">${feed&&feed.model&&feed.model.boundary||trained&&trained.market_teacher_frame&&trained.market_teacher_frame.boundary||"行为相似度评分，不是价格预测。"} 24H结果是市场方向后验，不是可执行PnL；减仓与平仓是降险动作，不能误读成反向开仓。具体入场、加减仓与失效位仍由关键位计划和风险预算独立决定。</div>`;
+  el.classList.add("on");
+}
 function openDetail(name){
   if(name==="Paul Wei 重建"){openPaulEvidence();return;}
-  const s=statFor(name),el=document.getElementById("modal");
+  const s=statFor(name),el=document.getElementById("modal"),trained=coachExpertRecord(name),trainedScope=trained&&trained.scopes&&trained.scopes[`${curSym}|${curTF}`],holdout=trainedScope&&trainedScope.holdout,aggregate=trained&&trained.aggregate_holdout;
   const rows=["1m","5m","15m","1h","4h","1d"].map(tf=>{const st=getStat(name,curSym,tf);
     const cur=tf===curTF?'cur':'';
     if(!st) return `<tr class="${cur}"><td>${tf}</td><td colspan="4" style="text-align:center;color:var(--muted)">— 待接入 —</td></tr>`;
@@ -1364,11 +1462,14 @@ function openDetail(name){
     <div class="ctx" style="margin:4px 0">累计盈亏(R) · 历史回测曲线</div>${curveSVG(s.curve&&s.curve.length?s.curve:[0])}`
     : `<div class="demoflag" style="margin:10px 0">该「专家 × 标的 × 周期」暂无正式历史证据。未覆盖的数据不会用浏览器短样本补成战绩。</div>`;
   const scope=evidenceScope(curSym,curTF),scopeText=scope?`${new Date(scope.from).toLocaleDateString()}–${new Date(scope.through).toLocaleDateString()} · ${scope.candles}根K线`:"该范围待接入";
+  const trainedBlock=holdout&&holdout.n?`<div class="demoflag" style="margin:10px 0"><b>独立镜头压力测试：</b>${curSym} ${curTF} 最终留出 ${holdout.n.toLocaleString()} 笔 · EV <span style="color:${holdout.ev>=0?'#73d58a':'#f0776f'}">${holdout.ev>=0?'+':''}${holdout.ev}R</span> · 先验倍率 ${holdout.prior_multiplier||1}x。该结果衡量“只听这一种分析镜头”会怎样，不把它冒充完整交易策略；当前汇总处理为 ${aggregate&&aggregate.status==="downweight"?"降权观察":"继续观察"}。</div>`
+    :`<div class="demoflag" style="margin:10px 0"><b>独立镜头压力测试：</b>${trained&&trained.calibration_boundary||"该标的与周期尚无足够最终留出样本"}。没有证据就不补造战绩。</div>`;
   el.querySelector(".sheet").innerHTML=`
     <span class="closeX" onclick="closeDetail()">✕</span>
     <h3>${name} · 战绩（真实回测）</h3>
     <div class="ctx">${curSym.replace('USDT','/USDT')} · ${curTF} · ${scopeText}</div>
     ${kpis}
+    ${trainedBlock}
     <div class="ctx" style="margin:12px 0 4px">该专家在各周期的表现（当前周期高亮 · 无数据=待接入）</div>
     <table class="tf-tbl"><tr><th>周期</th><th>胜率</th><th>期望</th><th>盈亏比</th><th>样本</th></tr>${rows}</table>
     <div class="demoflag">数据来源：${(REALSTATS.meta&&REALSTATS.meta.source)||'—'} · 引擎 ${(REALSTATS.meta&&REALSTATS.meta.engine_version)||'—'} · ${evidenceBoundary()}。历史90日差异是环境漂移，不是专家自动成长；成长只看前向赛场。</div>
@@ -1418,7 +1519,9 @@ function renderEV(nl,ns,nn){
   const plan=candidates[0]||null;
   const entry=plan&&plan.entry,stop=plan&&plan.stop,tgt=plan&&plan.target,rr=plan?plan.rr:0;
   const near=plan?Math.abs(price-entry)<=.65*a:false;
-  const executable=!!(plan&&near&&rr>=1);
+  let executable=!!(plan&&near&&rr>=1);
+  const trainedGate=plan?planGateResult(dir,plan):null;
+  if(trainedGate&&trainedGate.authorized&&(!trainedGate.available||!trainedGate.pass))executable=false;
   let light, cls, dirTxt, dirColor;
   if(dir==="flat"){light="● 观望 · 共识不足";cls="avoid";dirTxt="● 不下单";dirColor="var(--neu)";}
   else if(!plan){light="● 观望 · 无完整结构";cls="avoid";dirTxt=dir==="long"?"▲ 多头候选":"▼ 空头候选";dirColor="var(--warn)";}
@@ -1426,7 +1529,9 @@ function renderEV(nl,ns,nn){
     dirTxt = dir==="long"?"▲ 多头计划":"▼ 空头计划";
     dirColor = dir==="long"?"#4ac26b":"#f0776f";
     if(!near){light="● 等待 · 尚未到位";cls="caution";}
-    else if(rr>=1.5){light="● 绿灯 · 等触发";cls="go";}
+    else if(trainedGate&&trainedGate.authorized&&!trainedGate.available){light="● 观望 · 训练门控未就绪";cls="avoid";}
+    else if(trainedGate&&trainedGate.authorized&&!trainedGate.pass){light="● 观望 · 计划门控未通过";cls="avoid";}
+    else if(rr>=1.5){light=trainedGate&&trainedGate.authorized?"● 绿灯 · 训练门控通过":"● 绿灯 · 等触发";cls="go";}
     else if(rr>=1.0){light="● 黄灯 · 赔率一般";cls="caution";}
     else{light="● 红灯 · 赔率不足";cls="avoid";}
   }
@@ -1443,6 +1548,9 @@ function renderEV(nl,ns,nn){
   }else{
     reason = (nl>0&&ns>0)? "评审团多空分歧，方向不明" : "共识不足，等待更清晰的机会";
   }
+  const gateLine=!trainedGate?"":trainedGate.authorized
+    ?trainedGate.available?`<br><b>训练门控：</b>计划质量分 ${(trainedGate.probability*100).toFixed(1)}% / 门槛 ${(trainedGate.threshold*100).toFixed(1)}% · 只可否决，不生成方向、价位或仓位。`:`<br><b>训练门控：</b>${trainedGate.reason}，当前禁止记录为可执行计划。`
+    :`<br><b>训练边界：</b>${trainedGate.scope} 未通过验证与最终留出双重授权；本次仍是规则计划，不把研究分当作下单许可。`;
   el.className="evcard "+cls;
   if(dir==="flat"||!plan){
     el.innerHTML=`
@@ -1468,7 +1576,7 @@ function renderEV(nl,ns,nn){
       <div class="ev-chip"><div class="kk" style="color:#f0b3ae">止损</div><div class="vv">${fmt(stop)}</div></div>
       <div class="ev-chip"><div class="kk" style="color:#a9d3ff">目标</div><div class="vv">${fmt(tgt)}</div></div>
     </div>
-    <div class="ev-reason"><b>触发：</b>${plan.trigger}<br>${reason} · ${near?"已接近计划区":"现价未到计划区"} · 建议名义仓位 <b>${posPct.toFixed(1)}%</b>${posPct>100?`（约 ${(posPct/100).toFixed(2)}x；现货应封顶100%）`:""}（按 ${(rp*100).toFixed(1)}% 风险计算）</div>
+    <div class="ev-reason"><b>触发：</b>${plan.trigger}<br>${reason} · ${near?"已接近计划区":"现价未到计划区"} · 建议名义仓位 <b>${posPct.toFixed(1)}%</b>${posPct>100?`（约 ${(posPct/100).toFixed(2)}x；现货应封顶100%）`:""}（按 ${(rp*100).toFixed(1)}% 风险计算）${gateLine}</div>
     <div class="ev-act">${action}<span class="ev-dis">先等触发，再执行；失效：${plan.invalid}</span></div>`;
 }
 function logTrade(){
@@ -1789,12 +1897,67 @@ document.getElementById("tfsel").onchange=e=>{curTF=e.target.value;document.getE
 document.getElementById("acct").oninput=()=>recompute();
 document.getElementById("riskpct").oninput=()=>recompute();
 
-/* ============ 多页: 雷达 / 成长 / 我的 ============ */
+/* ============ 多页: 雷达 / 教练档案 / 成长 / 我的 ============ */
+function trainingDate(value){return value?String(value).slice(0,10):"—";}
+function trainingCount(value){const n=+value||0;return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":n.toLocaleString();}
+function renderTraining(){
+  const box=document.getElementById("trainingBox");if(!box)return;
+  if(!COACH_TRAINING){box.innerHTML='<div class="demoflag">训练证据文件尚未加载。网页不会用演示数字补位。</div>';return;}
+  const meta=COACH_TRAINING.meta||{},quality=meta.quality||{},datasets=quality.datasets||{},paul=COACH_TRAINING.paul_wei||{},ledger=paul.public_ledger||{},labels=paul.behavior_labels||{};
+  const plan=PLAN_GATE||{},sampleTotal=Object.values(plan.samples||{}).filter(Number.isFinite).reduce((sum,value)=>sum+value,0);
+  const marketRows=(datasets.btc_futures&&datasets.btc_futures.rows_clean||0)+(datasets.eth_futures&&datasets.eth_futures.rows_clean||0)+(datasets.nq&&datasets.nq.rows_clean||0)+(datasets.es&&datasets.es.rows_continuous||0);
+  const authorized=(plan.deployment&&plan.deployment.scopes||[]).map(scope=>scope.replace("BTCUSDT","BTC").replace("ETHUSDT","ETH")).join(" · ")||"无";
+  const validation=plan.validation||{},holdout=plan.holdout||{},probability=plan.probability_quality||{},consensus=meta.trained_consensus&&meta.trained_consensus.global||{};
+  const statusText=plan.status==="accepted_limited"?"受限通过":"未通过";
+  const experts=Object.values(COACH_TRAINING.experts||{}).sort((left,right)=>{const a=left.aggregate_holdout||{},b=right.aggregate_holdout||{};if(a.status==="pending"&&b.status!=="pending")return 1;if(b.status==="pending"&&a.status!=="pending")return-1;return(b.scope_weighted_ev??-99)-(a.scope_weighted_ev??-99);});
+  const expertRows=experts.map(expert=>{const a=expert.aggregate_holdout||{},pending=a.status==="pending",status=pending?"待上下文":a.status==="supported"?"支持":"降权";return `<div class="training-row"><span><b>${expert.name}</b><br><span class="rmini">${expert.school}</span></span><span class="num">${pending?"—":trainingCount(a.n)}</span><span class="num" style="color:${a.scope_weighted_ev>=0?'#73d58a':'#f0776f'}">${pending?"—":`${a.scope_weighted_ev>=0?'+':''}${a.scope_weighted_ev}R`}</span><span class="num">${a.positive_scope_pct==null?"—":a.positive_scope_pct+"%"}</span><span class="num">${status} · ${a.prior_multiplier||1}x</span></div>`;}).join("");
+  const dataRows=[
+    ["BTC 永续",datasets.btc_futures,"rows_clean","主训练 OHLCV","1分钟"],["ETH 永续",datasets.eth_futures,"rows_clean","主训练 OHLCV","1分钟"],
+    ["NQ",datasets.nq,"rows_clean","跨资产压力测试","1分钟 · 美东时间"],["ES",datasets.es,"rows_continuous","跨资产压力测试","1分钟 · ES主力连续"],
+    ["BTC 指数",datasets.btc_index,"rows_clean","基差质检 / 后续上下文","1分钟"],["ETH 指数",datasets.eth_index,"rows_clean","基差质检 / 后续上下文","1分钟"],
+    ["BTC 衍生品指标",datasets.btc_metrics,"rows_unique_5m","质检 / 后续上下文","5分钟源 · 1小时上下文"],["ETH 衍生品指标",datasets.eth_metrics,"rows_unique_5m","质检 / 后续上下文","5分钟源 · 1小时上下文"],
+  ].filter(row=>row[1]).map(([name,data,countKey,use,grain])=>{const gaps=data.missing_minutes!=null?`${trainingCount(data.missing_minutes)} 分钟缺口`:data.gap_events_over_1h!=null?`${data.gap_events_over_1h} 个小时级断点`:data.gap_events_over_1m_including_scheduled_closures!=null?`${data.gap_events_over_1m_including_scheduled_closures} 个断点含休市`:"0";return `<div class="training-row"><span><b>${name}</b><br><span class="rmini">${grain}</span></span><span class="num">${trainingCount(data[countKey])}</span><span class="num">${trainingDate(data.from)}<br>${trainingDate(data.through)}</span><span class="num">${gaps}</span><span class="num">${use}</span></div>`;}).join("");
+  const qualityText={
+    nq_excel_row_limit:["NQ 导出边界","NQ 恰好达到 Excel 最大数据行数，结尾可能被截断；模型不会假装拥有更晚的数据。"],
+    btc_metrics_exact_duplicates:["BTC 指标重复","发现 40,152 条完全重复记录，已按时间去重后再做上下文质检。"],
+    paul_skill_ahead_of_archive:["Paul 标签越界","3 个行为片段晚于本次 XBTUSD 成交账本，保留为 skill-only 标签并单独标记。"],
+    es_contract_selection:["ES 连续合约","已排除 MES、价差与远月，按每日成交量选择 ES 主力并做前向加法移仓调整。"],
+    btc_index_gaps:["BTC 指数缺口",`BTC 指数缺失 ${datasets.btc_index&&datasets.btc_index.missing_minutes.toLocaleString()||0} 分钟，未用于替代完整永续主行情。`],
+    eth_index_gaps:["ETH 指数缺口",`ETH 指数缺失 ${datasets.eth_index&&datasets.eth_index.missing_minutes.toLocaleString()||0} 分钟，未用于替代完整永续主行情。`],
+    eth_metrics_coverage:["ETH 指标覆盖",`ETH 衍生品指标从 ${trainingDate(datasets.eth_metrics&&datasets.eth_metrics.from)} 开始，早期窗口不做伪造补齐。`],
+  };
+  const flags=[...(quality.flags||[])];
+  const flagCodes=new Set(flags.map(flag=>flag.code));
+  if(datasets.btc_index&&datasets.btc_index.missing_minutes&&!flagCodes.has("btc_index_gaps"))flags.push({severity:"warning",code:"btc_index_gaps",message:`BTC 指数有 ${datasets.btc_index.missing_minutes.toLocaleString()} 个缺失分钟，未用于替代永续主行情。`});
+  if(datasets.eth_index&&datasets.eth_index.missing_minutes&&!flagCodes.has("eth_index_gaps"))flags.push({severity:"warning",code:"eth_index_gaps",message:`ETH 指数有 ${datasets.eth_index.missing_minutes.toLocaleString()} 个缺失分钟，未用于替代永续主行情。`});
+  if(datasets.eth_metrics&&!flagCodes.has("eth_metrics_coverage"))flags.push({severity:"info",code:"eth_metrics_coverage",message:`ETH 衍生品指标从 ${trainingDate(datasets.eth_metrics.from)} 开始，对完整行情范围的小时匹配率为 83.34%。`});
+  const qualityRows=flags.map(flag=>{const translated=qualityText[flag.code],title=translated&&translated[0]||flag.code,copy=translated&&translated[1]||flag.message;return `<div class="quality-row"><span class="${flag.severity==="warning"?'quality-warn':'quality-info'}">${flag.severity==="warning"?'需注意':'已处理'}</span><span class="quality-code">${title}</span><span>${copy}</span></div>`;}).join("");
+  const actionNames={add_short:"加空",reduce_short:"减空",add_long:"加多",reduce_long:"减多",close_long:"平多",open_long:"开多",reverse_short_to_long:"空转多",open_short:"开空",reverse_long_to_short:"多转空",close_short:"平空"};
+  const actionRows=Object.entries(labels.action_counts||{}).sort((left,right)=>right[1]-left[1]).map(([key,value])=>`<div class="training-row"><span><b>${actionNames[key]||key}</b></span><span class="num">${value.toLocaleString()}</span><span class="num">${((value/(labels.bursts||1))*100).toFixed(1)}%</span><span class="num">${key.startsWith("reduce")||key.startsWith("close")?"降险":"进攻/反转"}</span><span class="num">行为标签</span></div>`).join("");
+  const importanceNames={rr:"计划赔率",target_atr:"目标距离/ATR",entry_distance_atr:"入场距离/ATR",vote_momentum:"动量镜头",vote_mean_reversion:"均值回归镜头",current_range_atr:"当前K线幅度",hour_cos:"UTC时段",atr_pct:"波动率"};
+  const importance=(plan.top_feature_importances||[]).slice(0,8).map(row=>`${importanceNames[row.feature]||row.feature} ${(row.importance*100).toFixed(1)}%`).join(" · ");
+  box.innerHTML=`<section class="training-hero"><div class="training-head"><div><div class="training-title">教练训练与证据档案</div><div class="training-copy">这里的“训练”分三层：Paul Wei 用真实动作标签重建行为；17 个技术流派作为分析镜头做独立压力测试；最终计划再由低频门控做安全否决。数据多不等于自动有效，所有失败结果、缺口和适用范围都保留。</div></div><span class="grade ${plan.status==='accepted_limited'?'g-watch':'g-bad'}">计划门控 ${statusText}</span></div>
+    <div class="training-kpis"><div class="training-kpi"><b>${trainingCount(labels.bursts)}</b><span>Paul 行为片段</span></div><div class="training-kpi"><b>${trainingCount(marketRows)}</b><span>清洗后分钟行情</span></div><div class="training-kpi"><b>${(meta.scopes||[]).length}</b><span>标的 × 周期范围</span></div><div class="training-kpi"><b>${holdout.scope_weighted_ev>=0?'+':''}${holdout.scope_weighted_ev??'—'}R</b><span>最终留出范围加权EV · ${holdout.n||0}笔</span></div></div></section>
+    <section class="training-section"><h3>计划质量门控</h3><div class="training-sub">从 ${trainingCount(sampleTotal)} 个已执行候选计划学习；阈值只看开发集与验证集，最终留出不参与选择。它只能否决已有计划。</div>
+      <div class="training-kpis"><div class="training-kpi"><b>${statusText}</b><span>部署状态</span></div><div class="training-kpi"><b>${authorized}</b><span>双阶段授权范围</span></div><div class="training-kpi"><b>${validation.scope_weighted_ev>=0?'+':''}${validation.scope_weighted_ev??'—'}R</b><span>验证集范围加权EV · ${validation.n||0}笔</span></div><div class="training-kpi"><b>${holdout.scope_weighted_ev>=0?'+':''}${holdout.scope_weighted_ev??'—'}R</b><span>最终留出范围加权EV · ${holdout.n||0}笔</span></div></div>
+      <div class="evidence-line"><b>区分能力：</b>验证 AUC ${probability.validation&&probability.validation.roc_auc||'—'} · 最终留出 AUC ${probability.holdout&&probability.holdout.roc_auc||'—'} · 门槛 ${((plan.selection&&plan.selection.probability_threshold||.5)*100).toFixed(0)}% · 选择过程使用留出集：${plan.selection&&plan.selection.used_holdout?'是':'否'}。</div>
+      <div class="evidence-line"><b>主要特征：</b>${importance||'—'}</div>
+      <div class="demoflag">简单“多数专家投票”压力测试失败：开发 ${consensus.development&&consensus.development.ev||'—'}R、验证 ${consensus.validation&&consensus.validation.ev||'—'}R、最终留出 ${consensus.holdout&&consensus.holdout.ev||'—'}R。因此网页不会把票数当胜率。当前门控也只是低频安全层；正向最终留出属于研究证据，持续部署权仍要由封存后的前向赛场确认。</div></section>
+    <section class="training-section"><h3>Paul Wei 教师账本 <button class="method-link" onclick="openPaulEvidence()">完整行为证据 ›</button></h3><div class="training-sub">真实成交监督行为标签；不复制身份，不把仓位绝对值迁移给其他交易员。</div>
+      <div class="training-kpis"><div class="training-kpi"><b>${trainingCount(ledger.executions)}</b><span>执行记录</span></div><div class="training-kpi"><b>${trainingCount(ledger.trade_executions)}</b><span>交易执行</span></div><div class="training-kpi"><b>${trainingCount(ledger.orders)}</b><span>订单</span></div><div class="training-kpi"><b>${trainingCount(labels.verified_by_supplied_xbtusd_ledger)}</b><span>被 XBTUSD 账本核验的标签</span></div></div>
+      <div class="training-row head"><span>动作</span><span class="num">片段</span><span class="num">占比</span><span class="num">性质</span><span class="num">监督类型</span></div>${actionRows}
+      <div class="demoflag">Paul 的 reduce_long、close_long、reduce_short、close_short 是降险，不是反向信号。模型学习的是情境下的动作倾向；具体入场、出场、加减仓位置由价位计划独立给出。</div></section>
+    <section class="training-section"><h3>独立分析镜头压力测试</h3><div class="training-sub">每个镜头被故意单独拿出来交易，检验它是否能独立承担策略责任。负值会公开并降权，不删除失败证据。</div>
+      <div class="training-row head"><span>分析镜头</span><span class="num">最终留出样本</span><span class="num">范围加权EV</span><span class="num">正向范围</span><span class="num">处理</span></div>${expertRows}</section>
+    <section class="training-section"><h3>数据覆盖</h3><div class="training-sub">发布物只含聚合统计与模型参数；原始订单、执行ID和分钟K线始终留在本机并被 Git 忽略。</div>
+      <div class="training-row head"><span>数据集</span><span class="num">清洗后记录</span><span class="num">起止</span><span class="num">缺口/断点</span><span class="num">用途</span></div>${dataRows}</section>
+    <section class="training-section"><h3>质量警示</h3><div class="training-sub">这些问题没有被静默修掉；每次重训都会重新产出质量清单。</div>${qualityRows}</section>`;
+}
 function showPage(p){
-  const map={desk:'pDesk',radar:'pRadar',arena:'pArena',growth:'pGrowth',me:'pMe'};
+  const map={desk:'pDesk',radar:'pRadar',arena:'pArena',training:'pTraining',growth:'pGrowth',me:'pMe'};
   for(const k in map){document.getElementById(map[k]).classList.toggle('on',k===p);document.getElementById('nav-'+k).classList.toggle('on',k===p);}
   const f=document.getElementById('deskFoot'); if(f)f.style.display=p==='desk'?'':'none';
-  if(p==='radar')renderRadar(); if(p==='arena'){renderExpertArena();refreshRemoteArena();} if(p==='growth')renderGrowth(); if(p==='me')renderMe();
+  if(p==='radar')renderRadar(); if(p==='arena'){renderExpertArena();refreshRemoteArena();} if(p==='training')renderTraining(); if(p==='growth')renderGrowth(); if(p==='me')renderMe();
 }
 // ---- 自选 & 雷达 ----
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT"];
@@ -1925,6 +2088,7 @@ function renderMe(){
 document.getElementById("scanBtn").onclick=scanRadar;
 
 /* 启动 */
+window.addEventListener("ev-desk-coach-engine-ready",()=>{if(CARDS.length)recompute();});
 reload();
 </script>
 </body>

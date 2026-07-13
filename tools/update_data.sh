@@ -11,6 +11,12 @@ fi
 
 if [[ "$MODE" == "full" ]]; then
   (cd "$ROOT/arena-worker" && npm run evidence)
+  TRAINING_ROOT="${EV_DESK_TRAINING_DATA:-$ROOT/enent contract}"
+  if [[ -d "$TRAINING_ROOT" ]]; then
+    "$ROOT/tools/train_coaches.sh" "$TRAINING_ROOT"
+  else
+    echo "Coach training skipped: no local training data at $TRAINING_ROOT"
+  fi
 fi
 
 if [[ -n "${PYTHON_BIN:-}" ]]; then
