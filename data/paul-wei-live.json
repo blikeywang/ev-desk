@@ -1,0 +1,1020 @@
+{
+  "schema": "ev_desk_paul_wei_feed_v1",
+  "generated_at": "2026-07-13T09:11:15.371749+00:00",
+  "model": {
+    "id": "paul_wei",
+    "name": "Paul Wei 重建",
+    "version": "paul-wei-core-v2",
+    "kind": "behavior_model",
+    "boundary": "行为相似度评分，不是本人实时发言、价格预测或自动订单。"
+  },
+  "sources": {
+    "BTCUSDT": {
+      "market": "Binance official Spot 1H",
+      "as_of": "2026-07-13T08:00:00+00:00"
+    },
+    "ETHUSDT": {
+      "market": "Binance official Spot 1H",
+      "as_of": "2026-07-13T08:00:00+00:00"
+    },
+    "SOLUSDT": {
+      "market": "Binance official Spot 1H",
+      "as_of": "2026-07-13T08:00:00+00:00"
+    }
+  },
+  "snapshots": {
+    "BTCUSDT": {
+      "market_profile": {
+        "label": "BTC / XBTUSD",
+        "transfer_mode": "native",
+        "max_r": 1.0,
+        "active_multiplier": 1.0,
+        "material_multiplier": 1.0,
+        "notes": [
+          "原生训练品种，可直接解释为 Paul Wei 的历史行为相似度。",
+          "多头进攻模板比空头模板更可靠；减多优先解释为风控。"
+        ]
+      },
+      "coaching": {
+        "profile": "btc",
+        "profile_label": "BTC / XBTUSD",
+        "transfer_mode": "native",
+        "stance": "short_bias",
+        "suggested_action": "空头信号，需更严格确认",
+        "suggested_risk_unit": "0.25R",
+        "confidence": "低",
+        "active_share_adjusted": 0.1445181318677914,
+        "material_share_adjusted": 0.03060154151426006,
+        "action_groups": {
+          "offensive_long": 0.03708479941193424,
+          "offensive_short": 0.042731860680389755,
+          "derisk_long": 0.018190413583848316,
+          "derisk_short": 0.046511058191619076
+        },
+        "profile_notes": [
+          "原生训练品种，可直接解释为 Paul Wei 的历史行为相似度。",
+          "多头进攻模板比空头模板更可靠；减多优先解释为风控。"
+        ]
+      },
+      "query": {
+        "close": 63206.97,
+        "timestamp": "2026-07-13T08:00:00+00:00",
+        "event_hour": "2026-07-13T08:00:00+00:00",
+        "range_pct": 0.0058056888346332,
+        "atr24h_pct": 0.0045157598916701,
+        "dist_ma24h": -0.0077525306290244,
+        "dist_ma168h": -0.0037574007649899,
+        "dist_24h_high": -0.0189061699650756,
+        "dist_24h_low": 0.0112992226014532,
+        "dist_72h_high": -0.0229679239569516,
+        "dist_72h_low": 0.0112992226014532,
+        "volume_z_72h": 2.4670904148894808,
+        "hourly_state": "downtrend_below_ma24h",
+        "back_ret_6h": -0.0026669405874368,
+        "back_ret_12h": -0.0154507344285859,
+        "back_ret_24h": -0.0121314695518416,
+        "range_p90": 0.010269222172902093,
+        "setup_1h": "volume_spike_hour",
+        "action_type": "no_action",
+        "action_family": "none",
+        "risk_direction_label": "none",
+        "action_abs_btc": 0.0,
+        "action_event_bucket": "no_action",
+        "action_start": "NaT",
+        "actions_in_hour": 0,
+        "total_abs_btc_in_hour": 0.0,
+        "risk_direction_fwd_24h": null,
+        "risk_direction_fwd_72h": null,
+        "risk_direction_fwd_168h": null
+      },
+      "action_probs": {
+        "no_action": 0.8554818681322086,
+        "open_long": 0.007757612302165488,
+        "add_long": 0.0269044535612229,
+        "reduce_long": 0.00971593492817693,
+        "close_long": 0.008474478655671386,
+        "reverse_short_to_long": 0.0024227335485458483,
+        "reverse_long_to_short": 0.003979720838763821,
+        "open_short": 0.012460493439647833,
+        "add_short": 0.026291646401978102,
+        "reduce_short": 0.046511058191619076,
+        "close_short": 0.0
+      },
+      "conditional_action_probs": {
+        "reduce_short": 0.321835451306335,
+        "add_long": 0.18616662984431415,
+        "add_short": 0.18192628192862556,
+        "open_short": 0.086220969497772,
+        "reduce_long": 0.06722986799376356,
+        "close_long": 0.05863955301763822,
+        "open_long": 0.05367916262066227,
+        "reverse_long_to_short": 0.027537865230672674,
+        "reverse_short_to_long": 0.01676421856021653
+      },
+      "material_action_probs": {
+        "add_long": 0.009753497181008115,
+        "reduce_long": 0.0056942411853570995,
+        "close_long": 0.0047064351118038,
+        "reverse_long_to_short": 0.003979720838763821,
+        "reverse_short_to_long": 0.0024227335485458483,
+        "add_short": 0.002136241437016122,
+        "open_short": 0.001908672211765259
+      },
+      "large_action_probs": {
+        "reverse_long_to_short": 0.003979720838763821,
+        "close_long": 0.0019922867274689373,
+        "add_long": 0.0019336442736207523,
+        "reduce_long": 0.0018249714834674452
+      },
+      "size_quantiles": {
+        "any_action": {
+          "p25_btc": 0.5090041251129747,
+          "p50_btc": 1.7221614312758318,
+          "p75_btc": 6.399309750156698,
+          "p90_btc": 16.01296577452602
+        },
+        "create_long": {
+          "p25_btc": 0.7866585253240302,
+          "p50_btc": 3.1976125879609762,
+          "p75_btc": 9.38838426028571,
+          "p90_btc": 14.388711628371917
+        },
+        "create_short": {
+          "p25_btc": 0.6618653408860864,
+          "p50_btc": 1.5093081026813637,
+          "p75_btc": 5.967950578998366,
+          "p90_btc": 10.377526931623375
+        }
+      },
+      "similar_examples": [
+        {
+          "event_hour": "2020-07-14T04:00:00+00:00",
+          "action_type": "close_long",
+          "action_abs_btc": 18.91562464,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0085498024645007,
+          "dist_ma24h": -0.0084448353253741,
+          "dist_24h_high": -0.016465428486422,
+          "volume_z_72h": 2.342721196146678,
+          "risk_direction_fwd_24h": 0.0060838065847874,
+          "risk_direction_fwd_72h": -0.0080544332571269,
+          "risk_direction_fwd_168h": -0.0016224209654656,
+          "distance": 0.5783458344459153
+        },
+        {
+          "event_hour": "2023-07-18T12:00:00+00:00",
+          "action_type": "open_short",
+          "action_abs_btc": 6.70403986,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0139707342912004,
+          "dist_ma24h": -0.0090632501130063,
+          "dist_24h_high": -0.0172891645770093,
+          "volume_z_72h": 2.2814529423497354,
+          "risk_direction_fwd_24h": -0.0027793914202802,
+          "risk_direction_fwd_72h": 0.019115251282942,
+          "risk_direction_fwd_168h": 0.0125501940058803,
+          "distance": 0.6852425693486487
+        },
+        {
+          "event_hour": "2022-12-30T14:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.612257,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0129967593792487,
+          "dist_ma24h": -0.009173508880352,
+          "dist_24h_high": -0.0150626394813856,
+          "volume_z_72h": 2.7551012498042895,
+          "risk_direction_fwd_24h": -0.0150609090185849,
+          "risk_direction_fwd_72h": -0.0123186169687004,
+          "risk_direction_fwd_168h": -0.001477221497641,
+          "distance": 0.9017661982996422
+        },
+        {
+          "event_hour": "2020-08-25T07:00:00+00:00",
+          "action_type": "reverse_short_to_long",
+          "action_abs_btc": 16.62594954,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0146420741279984,
+          "dist_ma24h": -0.012262734271335,
+          "dist_24h_high": -0.020168458084212,
+          "volume_z_72h": 2.5275231530147666,
+          "risk_direction_fwd_24h": -0.0205715143862508,
+          "risk_direction_fwd_72h": -0.017846770483696,
+          "risk_direction_fwd_168h": 0.0291142813002474,
+          "distance": 0.9648739295800449
+        },
+        {
+          "event_hour": "2025-08-05T12:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.175934,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0044301877348957,
+          "dist_ma24h": -0.0067412373902828,
+          "dist_24h_high": -0.0154048565502937,
+          "volume_z_72h": 2.1552548678278307,
+          "risk_direction_fwd_24h": 0.0252375949831018,
+          "risk_direction_fwd_72h": 0.0461066850876319,
+          "risk_direction_fwd_168h": 0.0297692537651226,
+          "distance": 1.1195894523168943
+        },
+        {
+          "event_hour": "2025-09-22T05:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.265321,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0170519683481769,
+          "dist_ma24h": -0.0133119300992323,
+          "dist_24h_high": -0.0183723646177061,
+          "volume_z_72h": 2.269383792622597,
+          "risk_direction_fwd_24h": -0.0129422316516716,
+          "risk_direction_fwd_72h": -0.0185800992786437,
+          "risk_direction_fwd_168h": 0.0276206861323667,
+          "distance": 1.1468829886581426
+        },
+        {
+          "event_hour": "2025-06-04T14:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.095643,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0142347241450281,
+          "dist_ma24h": -0.0048887971957437,
+          "dist_24h_high": -0.0164930515727048,
+          "volume_z_72h": 2.4899157707297723,
+          "risk_direction_fwd_24h": -0.0062763942498695,
+          "risk_direction_fwd_72h": -0.0290417322330138,
+          "risk_direction_fwd_168h": -0.0094412640692422,
+          "distance": 1.275814302327425
+        },
+        {
+          "event_hour": "2026-01-20T05:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 2.636936,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0095943467517701,
+          "dist_ma24h": -0.0130920192619592,
+          "dist_24h_high": -0.0192230785698994,
+          "volume_z_72h": 2.0704127966247543,
+          "risk_direction_fwd_24h": 0.0057016294246138,
+          "risk_direction_fwd_72h": 0.0203303949996938,
+          "risk_direction_fwd_168h": 0.0996044535057113,
+          "distance": 1.281241731332704
+        },
+        {
+          "event_hour": "2024-11-04T14:00:00+00:00",
+          "action_type": "add_long",
+          "action_abs_btc": 10.595434,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": 0.0091035306962539,
+          "dist_ma24h": -0.0050715609310481,
+          "dist_24h_high": -0.0159135251798562,
+          "volume_z_72h": 2.024795157412161,
+          "risk_direction_fwd_24h": -0.0010134519180552,
+          "risk_direction_fwd_72h": 0.090030297505377,
+          "risk_direction_fwd_168h": 0.1910412070770206,
+          "distance": 1.284574375136988
+        },
+        {
+          "event_hour": "2025-05-05T13:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.32025,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.011984875227759,
+          "dist_ma24h": -0.0059237837093619,
+          "dist_24h_high": -0.0159955170362646,
+          "volume_z_72h": 3.166450242799602,
+          "risk_direction_fwd_24h": 0.0051725558284191,
+          "risk_direction_fwd_72h": 0.0203726934768213,
+          "risk_direction_fwd_168h": -0.0802599677777602,
+          "distance": 1.2862104311757814
+        },
+        {
+          "event_hour": "2023-11-07T10:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 7.20032566,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0146449393626867,
+          "dist_ma24h": -0.009661140990444,
+          "dist_24h_high": -0.0172104964539007,
+          "volume_z_72h": 3.006277413982237,
+          "risk_direction_fwd_24h": -0.0053637656427757,
+          "risk_direction_fwd_72h": 0.00347212741752,
+          "risk_direction_fwd_168h": 0.0492579635949943,
+          "distance": 1.2926606012184756
+        },
+        {
+          "event_hour": "2025-06-18T14:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 0.285318,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "volume_spike_hour",
+          "back_ret_24h": -0.0021693447033891,
+          "dist_ma24h": -0.000160448055166,
+          "dist_24h_high": -0.0088146624352547,
+          "volume_z_72h": 2.260140137494143,
+          "risk_direction_fwd_24h": -0.0044071432246808,
+          "risk_direction_fwd_72h": 0.0064093012818123,
+          "risk_direction_fwd_168h": -0.0165280806620087,
+          "distance": 1.3339036376291271
+        }
+      ],
+      "evidence": {
+        "neighbor_count": 500,
+        "active_neighbor_weight_share": 0.1445181318677914,
+        "material_action_weight_share": 0.03060154151426006,
+        "large_action_weight_share": 0.009730623323320956,
+        "material_threshold_btc": 7.763013677499999,
+        "large_threshold_btc": 20.516678665000008,
+        "active_neighbor_rows": 72,
+        "query_hour": "2026-07-13 08:00:00+00:00",
+        "data_latest_hour": "2026-07-13 08:00:00+00:00",
+        "data_first_hour": "2020-05-01 00:00:00+00:00"
+      }
+    },
+    "ETHUSDT": {
+      "market_profile": {
+        "label": "Major crypto / ETH, SOL, BNB",
+        "transfer_mode": "cross_asset",
+        "max_r": 1.0,
+        "active_multiplier": 0.95,
+        "material_multiplier": 0.9,
+        "notes": [
+          "与 BTC 市场结构最接近，趋势延续和回踩加仓迁移度较高。",
+          "需要检查 BTC 方向、资金费率、链上/叙事事件和流动性。",
+          "非 BTC 品种波动更大，仓位应按 ATR 或账户 R 重新缩放。"
+        ]
+      },
+      "coaching": {
+        "profile": "crypto_major",
+        "profile_label": "Major crypto / ETH, SOL, BNB",
+        "transfer_mode": "cross_asset",
+        "stance": "watch",
+        "suggested_action": "不动 / 只观察",
+        "suggested_risk_unit": "0R",
+        "confidence": "低",
+        "active_share_adjusted": 0.055326638639012396,
+        "material_share_adjusted": 0.014424104586865676,
+        "action_groups": {
+          "offensive_long": 0.015642537413714824,
+          "offensive_short": 0.01439789335319611,
+          "derisk_long": 0.008264153197330378,
+          "derisk_short": 0.01993398302419285
+        },
+        "profile_notes": [
+          "与 BTC 市场结构最接近，趋势延续和回踩加仓迁移度较高。",
+          "需要检查 BTC 方向、资金费率、链上/叙事事件和流动性。",
+          "非 BTC 品种波动更大，仓位应按 ATR 或账户 R 重新缩放。"
+        ]
+      },
+      "query": {
+        "close": 1790.17,
+        "timestamp": "2026-07-13T08:00:00+00:00",
+        "event_hour": "2026-07-13T08:00:00+00:00",
+        "range_pct": 0.0054184798091801,
+        "atr24h_pct": 0.0069015791796309,
+        "dist_ma24h": -0.0083282361875043,
+        "dist_ma168h": 0.0060464096866728,
+        "dist_24h_high": -0.0302437703141927,
+        "dist_24h_low": 0.0091206827546943,
+        "dist_72h_high": -0.0302437703141927,
+        "dist_72h_low": 0.0091206827546943,
+        "volume_z_72h": -0.1675019568332008,
+        "hourly_state": "uptrend_pullback",
+        "back_ret_6h": -0.0093082972235596,
+        "back_ret_12h": -0.0170705994750886,
+        "back_ret_24h": -0.0083369340025037,
+        "range_p90": 0.010269222172902093,
+        "setup_1h": "near_24h_low",
+        "action_type": "no_action",
+        "action_family": "none",
+        "risk_direction_label": "none",
+        "action_abs_btc": 0.0,
+        "action_event_bucket": "no_action",
+        "action_start": "NaT",
+        "actions_in_hour": 0,
+        "total_abs_btc_in_hour": 0.0,
+        "risk_direction_fwd_24h": null,
+        "risk_direction_fwd_72h": null,
+        "risk_direction_fwd_168h": null
+      },
+      "action_probs": {
+        "no_action": 0.9417614330115659,
+        "open_long": 0.002216927604230019,
+        "add_long": 0.01157763925677583,
+        "reduce_long": 0.005952165930037464,
+        "close_long": 0.002311987267292913,
+        "reverse_short_to_long": 0.0018479705527089743,
+        "reverse_long_to_short": 0.002154628829006061,
+        "open_short": 0.0,
+        "add_short": 0.01224326452419005,
+        "reduce_short": 0.01993398302419285,
+        "close_short": 0.0
+      },
+      "conditional_action_probs": {
+        "reduce_short": 0.34228148210019704,
+        "add_short": 0.21022606079269587,
+        "add_long": 0.19879677429348636,
+        "reduce_long": 0.10220316600886711,
+        "close_long": 0.03969856036725732,
+        "open_long": 0.03806631445224756,
+        "reverse_long_to_short": 0.036996597622911256,
+        "reverse_short_to_long": 0.0317310443623376
+      },
+      "material_action_probs": {
+        "add_long": 0.007670590563914528,
+        "reduce_long": 0.0038895762140816904,
+        "close_long": 0.002311987267292913,
+        "reverse_long_to_short": 0.002154628829006061
+      },
+      "large_action_probs": {
+        "add_long": 0.005754341262857522,
+        "reduce_long": 0.0038895762140816904,
+        "close_long": 0.002311987267292913
+      },
+      "size_quantiles": {
+        "any_action": {
+          "p25_btc": 0.4791299673585241,
+          "p50_btc": 1.8798712088746237,
+          "p75_btc": 10.578049522378864,
+          "p90_btc": 25.33289887447455
+        },
+        "create_long": {
+          "p25_btc": 0.3917575099797963,
+          "p50_btc": 4.9778645440782965,
+          "p75_btc": 24.843688827678047,
+          "p90_btc": 46.00705512575242
+        },
+        "create_short": {
+          "p25_btc": 1.474196542950305,
+          "p50_btc": 2.874533209127942,
+          "p75_btc": 5.282222872479315,
+          "p90_btc": 11.178925040840555
+        }
+      },
+      "similar_examples": [
+        {
+          "event_hour": "2026-01-07T16:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.767607,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0154034336393782,
+          "dist_ma24h": -0.0121636899684857,
+          "dist_24h_high": -0.0274973538822461,
+          "volume_z_72h": -0.0902550302004062,
+          "risk_direction_fwd_24h": -0.0043756689643361,
+          "risk_direction_fwd_72h": 0.0364343665710493,
+          "risk_direction_fwd_168h": 0.0269624737765981,
+          "distance": 0.5756098218319375
+        },
+        {
+          "event_hour": "2022-12-05T23:00:00+00:00",
+          "action_type": "close_long",
+          "action_abs_btc": 20.530875,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.008146407337905,
+          "dist_ma24h": -0.0121238825595222,
+          "dist_24h_high": -0.0262794668350144,
+          "volume_z_72h": 0.1614038717876796,
+          "risk_direction_fwd_24h": -0.010007463921957,
+          "risk_direction_fwd_72h": -0.0234442659944298,
+          "risk_direction_fwd_168h": -0.0154448003763908,
+          "distance": 0.6285734327516932
+        },
+        {
+          "event_hour": "2023-06-28T08:00:00+00:00",
+          "action_type": "open_long",
+          "action_abs_btc": 5.297904000000001,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.003853905591486,
+          "dist_ma24h": -0.0094156577218875,
+          "dist_24h_high": -0.0231318178401205,
+          "volume_z_72h": -0.0189064311843246,
+          "risk_direction_fwd_24h": 0.0010314694316782,
+          "risk_direction_fwd_72h": 0.0014574190516476,
+          "risk_direction_fwd_168h": -0.0052587016586289,
+          "distance": 0.70637193305952
+        },
+        {
+          "event_hour": "2024-12-09T10:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 2.03089334,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0053874478812024,
+          "dist_ma24h": -0.0092820440111727,
+          "dist_24h_high": -0.0260133595129795,
+          "volume_z_72h": 0.4873148757997433,
+          "risk_direction_fwd_24h": 0.0009885038578676,
+          "risk_direction_fwd_72h": 0.0204861120181131,
+          "risk_direction_fwd_168h": -0.0263731302166712,
+          "distance": 0.7119858986185148
+        },
+        {
+          "event_hour": "2024-12-09T06:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 4.02730742,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.006333723798597,
+          "dist_ma24h": -0.0064633491382561,
+          "dist_24h_high": -0.0227561642213692,
+          "volume_z_72h": -0.3264943707479528,
+          "risk_direction_fwd_24h": 0.0046177054456445,
+          "risk_direction_fwd_72h": 0.0498514232248791,
+          "risk_direction_fwd_168h": -0.007717083292883,
+          "distance": 0.7452988199328009
+        },
+        {
+          "event_hour": "2020-11-15T20:00:00+00:00",
+          "action_type": "reverse_long_to_short",
+          "action_abs_btc": 19.09069639,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0091207839434179,
+          "dist_ma24h": -0.0091905929248712,
+          "dist_24h_high": -0.0206983930778739,
+          "volume_z_72h": -0.5590623864473158,
+          "risk_direction_fwd_24h": -0.0618778044947649,
+          "risk_direction_fwd_72h": -0.1134628370915928,
+          "risk_direction_fwd_168h": -0.1707221790963766,
+          "distance": 0.7591894700089227
+        },
+        {
+          "event_hour": "2025-03-18T04:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 0.80568368,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0074916705066629,
+          "dist_ma24h": -0.0069530138740335,
+          "dist_24h_high": -0.0208563722829181,
+          "volume_z_72h": -0.0704096612047726,
+          "risk_direction_fwd_24h": -0.0143814971640501,
+          "risk_direction_fwd_72h": -0.0107253870361756,
+          "risk_direction_fwd_168h": -0.0164477840933114,
+          "distance": 0.8230698750275899
+        },
+        {
+          "event_hour": "2023-11-14T01:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 0.549858,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0233678631655023,
+          "dist_ma24h": -0.0125926993883147,
+          "dist_24h_high": -0.0248633557046981,
+          "volume_z_72h": -0.0872411455240283,
+          "risk_direction_fwd_24h": -0.0066259184010897,
+          "risk_direction_fwd_72h": -0.0139049041855705,
+          "risk_direction_fwd_168h": -0.0374158650694831,
+          "distance": 0.840084270345222
+        },
+        {
+          "event_hour": "2020-10-16T07:00:00+00:00",
+          "action_type": "add_long",
+          "action_abs_btc": 42.43013481,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0079811666928434,
+          "dist_ma24h": -0.0098447040565908,
+          "dist_24h_high": -0.0268107845685845,
+          "volume_z_72h": 0.1102509351108688,
+          "risk_direction_fwd_24h": 0.0034592649658982,
+          "risk_direction_fwd_72h": 0.0138441358338632,
+          "risk_direction_fwd_168h": 0.139551401174788,
+          "distance": 0.8505981816457919
+        },
+        {
+          "event_hour": "2023-02-03T08:00:00+00:00",
+          "action_type": "add_long",
+          "action_abs_btc": 0.214289,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0158015327154795,
+          "dist_ma24h": -0.0101221493475989,
+          "dist_24h_high": -0.029865866598853,
+          "volume_z_72h": 0.1811124217148013,
+          "risk_direction_fwd_24h": 0.0178132292026123,
+          "risk_direction_fwd_72h": 0.0017061497075812,
+          "risk_direction_fwd_168h": -0.0218549653018752,
+          "distance": 0.8508323123885512
+        },
+        {
+          "event_hour": "2021-09-17T13:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 2.12265,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0045140033990419,
+          "dist_ma24h": -0.0093775731742608,
+          "dist_24h_high": -0.0204460712166245,
+          "volume_z_72h": -0.2427025470074718,
+          "risk_direction_fwd_24h": 0.0045140033990419,
+          "risk_direction_fwd_72h": 0.002720287095758,
+          "risk_direction_fwd_168h": 0.0723186712338438,
+          "distance": 0.8895061542145032
+        },
+        {
+          "event_hour": "2025-06-12T04:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.185952,
+          "hourly_state": "uptrend_pullback",
+          "setup_1h": "near_24h_low",
+          "back_ret_24h": -0.0164073099662066,
+          "dist_ma24h": -0.0115961529214007,
+          "dist_24h_high": -0.0237960156717863,
+          "volume_z_72h": 0.1992797269487494,
+          "risk_direction_fwd_24h": -0.0165375191596151,
+          "risk_direction_fwd_72h": 0.007964609243145,
+          "risk_direction_fwd_168h": 0.0081219971824217,
+          "distance": 0.8994701470155387
+        }
+      ],
+      "evidence": {
+        "neighbor_count": 500,
+        "active_neighbor_weight_share": 0.058238566988434104,
+        "material_action_weight_share": 0.016026782874295195,
+        "large_action_weight_share": 0.011955904744232125,
+        "material_threshold_btc": 7.763013677499999,
+        "large_threshold_btc": 20.516678665000008,
+        "active_neighbor_rows": 29,
+        "query_hour": "2026-07-13 08:00:00+00:00",
+        "data_latest_hour": "2026-07-13 08:00:00+00:00",
+        "data_first_hour": "2020-05-01 00:00:00+00:00"
+      }
+    },
+    "SOLUSDT": {
+      "market_profile": {
+        "label": "Major crypto / ETH, SOL, BNB",
+        "transfer_mode": "cross_asset",
+        "max_r": 1.0,
+        "active_multiplier": 0.95,
+        "material_multiplier": 0.9,
+        "notes": [
+          "与 BTC 市场结构最接近，趋势延续和回踩加仓迁移度较高。",
+          "需要检查 BTC 方向、资金费率、链上/叙事事件和流动性。",
+          "非 BTC 品种波动更大，仓位应按 ATR 或账户 R 重新缩放。"
+        ]
+      },
+      "coaching": {
+        "profile": "crypto_major",
+        "profile_label": "Major crypto / ETH, SOL, BNB",
+        "transfer_mode": "cross_asset",
+        "stance": "watch",
+        "suggested_action": "不动 / 只观察",
+        "suggested_risk_unit": "0R",
+        "confidence": "低",
+        "active_share_adjusted": 0.03036287676960245,
+        "material_share_adjusted": 0.008962535994080324,
+        "action_groups": {
+          "offensive_long": 0.0,
+          "offensive_short": 0.01780184123645623,
+          "derisk_long": 0.010107239344258407,
+          "derisk_short": 0.004051842334656155
+        },
+        "profile_notes": [
+          "与 BTC 市场结构最接近，趋势延续和回踩加仓迁移度较高。",
+          "需要检查 BTC 方向、资金费率、链上/叙事事件和流动性。",
+          "非 BTC 品种波动更大，仓位应按 ATR 或账户 R 重新缩放。"
+        ]
+      },
+      "query": {
+        "close": 76.73,
+        "timestamp": "2026-07-13T08:00:00+00:00",
+        "event_hour": "2026-07-13T08:00:00+00:00",
+        "range_pct": 0.0070376645379904,
+        "atr24h_pct": 0.0073689126373865,
+        "dist_ma24h": -0.0025133249555834,
+        "dist_ma168h": -0.0236723094949024,
+        "dist_24h_high": -0.0187979539641943,
+        "dist_24h_low": 0.0172345220734455,
+        "dist_72h_high": -0.0370230923694779,
+        "dist_72h_low": 0.0172345220734455,
+        "volume_z_72h": -0.3407291838892243,
+        "hourly_state": "downtrend_below_ma24h",
+        "back_ret_6h": 0.0032688284518829,
+        "back_ret_12h": -0.0094242189517168,
+        "back_ret_24h": 0.0003911342894393,
+        "range_p90": 0.010269222172902093,
+        "setup_1h": "near_ma24h",
+        "action_type": "no_action",
+        "action_family": "none",
+        "risk_direction_label": "none",
+        "action_abs_btc": 0.0,
+        "action_event_bucket": "no_action",
+        "action_start": "NaT",
+        "actions_in_hour": 0,
+        "total_abs_btc_in_hour": 0.0,
+        "risk_direction_fwd_24h": null,
+        "risk_direction_fwd_72h": null,
+        "risk_direction_fwd_168h": null
+      },
+      "action_probs": {
+        "no_action": 0.968039077084629,
+        "open_long": 0.0,
+        "add_long": 0.0,
+        "reduce_long": 0.010107239344258407,
+        "close_long": 0.0,
+        "reverse_short_to_long": 0.0,
+        "reverse_long_to_short": 0.0019182580137005723,
+        "open_short": 0.0020707646878858456,
+        "add_short": 0.01381281853486981,
+        "reduce_short": 0.004051842334656155,
+        "close_short": 0.0
+      },
+      "conditional_action_probs": {
+        "add_short": 0.4321783376357661,
+        "reduce_long": 0.3162374056287839,
+        "reduce_short": 0.12677488523673153,
+        "open_short": 0.06479051601134973,
+        "reverse_long_to_short": 0.06001885548736877
+      },
+      "material_action_probs": {
+        "reduce_long": 0.0061613656718175,
+        "reverse_long_to_short": 0.0019182580137005723,
+        "add_short": 0.0018787496412378422
+      },
+      "large_action_probs": {
+        "reduce_long": 0.0061613656718175,
+        "reverse_long_to_short": 0.0019182580137005723
+      },
+      "size_quantiles": {
+        "any_action": {
+          "p25_btc": 0.5007728959256912,
+          "p50_btc": 1.9985164880791582,
+          "p75_btc": 12.743529967987724,
+          "p90_btc": 32.22555693237357
+        },
+        "create_long": {
+          "p25_btc": null,
+          "p50_btc": null,
+          "p75_btc": null,
+          "p90_btc": null
+        },
+        "create_short": {
+          "p25_btc": 0.4829582439041489,
+          "p50_btc": 0.920601929744667,
+          "p75_btc": 3.94037626960984,
+          "p90_btc": 13.98489748648742
+        }
+      },
+      "similar_examples": [
+        {
+          "event_hour": "2024-06-19T15:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 2.46382629,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": 0.0033381757487713,
+          "dist_ma24h": -0.0031589332762624,
+          "dist_24h_high": -0.0122557454607307,
+          "volume_z_72h": -0.518029160459469,
+          "risk_direction_fwd_24h": 0.0361164910222545,
+          "risk_direction_fwd_72h": 0.0295890642054391,
+          "risk_direction_fwd_168h": 0.0996918398819221,
+          "distance": 0.7991523312597971
+        },
+        {
+          "event_hour": "2023-04-24T11:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 0.181848,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0033303307540092,
+          "dist_ma24h": -0.0002831084096865,
+          "dist_24h_high": -0.0160414285714285,
+          "volume_z_72h": -0.0604021701649696,
+          "risk_direction_fwd_24h": 0.0093902764773124,
+          "risk_direction_fwd_72h": -0.0136418403864824,
+          "risk_direction_fwd_168h": -0.0483738360437264,
+          "distance": 0.8154625312909375
+        },
+        {
+          "event_hour": "2020-10-02T15:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 28.44896259,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0189889541377891,
+          "dist_ma24h": -0.0025346033127587,
+          "dist_24h_high": -0.0189889541377891,
+          "volume_z_72h": -0.2321938807745911,
+          "risk_direction_fwd_24h": 0.0027813871550137,
+          "risk_direction_fwd_72h": 0.0202877651306891,
+          "risk_direction_fwd_168h": 0.0545851985305447,
+          "distance": 0.8202236556426998
+        },
+        {
+          "event_hour": "2020-06-28T08:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 28.237569979999996,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0126227377218657,
+          "dist_ma24h": -0.0022751965285773,
+          "dist_24h_high": -0.0154443555192123,
+          "volume_z_72h": 0.0464805078847369,
+          "risk_direction_fwd_24h": 0.0044730572849536,
+          "risk_direction_fwd_72h": 0.0132093247229743,
+          "risk_direction_fwd_168h": 0.001586002533628,
+          "distance": 0.8399841512658258
+        },
+        {
+          "event_hour": "2025-06-22T05:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 0.194878,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0054855285487378,
+          "dist_ma24h": -0.0013989029185517,
+          "dist_24h_high": -0.0108551773642215,
+          "volume_z_72h": -0.2442149169373621,
+          "risk_direction_fwd_24h": 0.0222398762178942,
+          "risk_direction_fwd_72h": 0.0366755144561464,
+          "risk_direction_fwd_168h": -0.0099986069598705,
+          "distance": 0.8508269999334039
+        },
+        {
+          "event_hour": "2020-12-10T18:00:00+00:00",
+          "action_type": "open_short",
+          "action_abs_btc": 1.21421008,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": 0.0043057967510056,
+          "dist_ma24h": -0.0023635617973259,
+          "dist_24h_high": -0.0195723399198586,
+          "volume_z_72h": -0.2759522339436475,
+          "risk_direction_fwd_24h": 0.0126124844389117,
+          "risk_direction_fwd_72h": -0.0498272206186132,
+          "risk_direction_fwd_168h": -0.2722620008481649,
+          "distance": 0.853359911984162
+        },
+        {
+          "event_hour": "2022-01-05T02:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 3.44942,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": 0.0041990431933811,
+          "dist_ma24h": -0.0024244783021784,
+          "dist_24h_high": -0.026506627550542,
+          "volume_z_72h": -0.6651326843645715,
+          "risk_direction_fwd_24h": -0.0155517009652758,
+          "risk_direction_fwd_72h": -0.0667851877864718,
+          "risk_direction_fwd_168h": -0.1047528303157572,
+          "distance": 0.9351615844394584
+        },
+        {
+          "event_hour": "2022-01-03T07:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 0.6396660000000001,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0025878963696739,
+          "dist_ma24h": -0.0018848818043634,
+          "dist_24h_high": -0.0195588664305063,
+          "volume_z_72h": -0.5666718827706619,
+          "risk_direction_fwd_24h": -0.0187236499872232,
+          "risk_direction_fwd_72h": 0.0045769207784449,
+          "risk_direction_fwd_168h": 0.1066428110450129,
+          "distance": 0.939887688688604
+        },
+        {
+          "event_hour": "2024-01-25T05:00:00+00:00",
+          "action_type": "add_short",
+          "action_abs_btc": 0.501178,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": 0.0019503076093907,
+          "dist_ma24h": -0.0025872474964743,
+          "dist_24h_high": -0.0167311059055603,
+          "volume_z_72h": -0.7436135968419993,
+          "risk_direction_fwd_24h": 0.0438933262185378,
+          "risk_direction_fwd_72h": 0.0144438212446913,
+          "risk_direction_fwd_168h": -0.0395360052633764,
+          "distance": 0.9447688856136521
+        },
+        {
+          "event_hour": "2020-10-02T19:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 57.50116491,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0096724915094924,
+          "dist_ma24h": -0.0020793887984904,
+          "dist_24h_high": -0.0140276652563985,
+          "volume_z_72h": -0.6064899148643453,
+          "risk_direction_fwd_24h": 0.0064269845858884,
+          "risk_direction_fwd_72h": 0.0205172781083096,
+          "risk_direction_fwd_168h": 0.0493806966022003,
+          "distance": 0.9491810330026637
+        },
+        {
+          "event_hour": "2022-06-10T06:00:00+00:00",
+          "action_type": "reduce_long",
+          "action_abs_btc": 1.997016,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0078784959816341,
+          "dist_ma24h": -0.0029041189875279,
+          "dist_24h_high": -0.0196912052117264,
+          "volume_z_72h": -0.4322401981479857,
+          "risk_direction_fwd_24h": -0.0194754097721254,
+          "risk_direction_fwd_72h": -0.0645631009582179,
+          "risk_direction_fwd_168h": -0.2991888252446086,
+          "distance": 0.954952741522534
+        },
+        {
+          "event_hour": "2025-02-13T20:00:00+00:00",
+          "action_type": "reduce_short",
+          "action_abs_btc": 1.14545999,
+          "hourly_state": "downtrend_below_ma24h",
+          "setup_1h": "near_ma24h",
+          "back_ret_24h": -0.0078404340973544,
+          "dist_ma24h": -0.002769792698565,
+          "dist_24h_high": -0.0189102139125778,
+          "volume_z_72h": -0.3184394084807908,
+          "risk_direction_fwd_24h": 0.0078404340973544,
+          "risk_direction_fwd_72h": -0.0052992396617621,
+          "risk_direction_fwd_168h": 0.0087041268849219,
+          "distance": 0.9776719103370475
+        }
+      ],
+      "evidence": {
+        "neighbor_count": 500,
+        "active_neighbor_weight_share": 0.031960922915371004,
+        "material_action_weight_share": 0.009958373326755915,
+        "large_action_weight_share": 0.008079623685518072,
+        "material_threshold_btc": 7.763013677499999,
+        "large_threshold_btc": 20.516678665000008,
+        "active_neighbor_rows": 16,
+        "query_hour": "2026-07-13 08:00:00+00:00",
+        "data_latest_hour": "2026-07-13 08:00:00+00:00",
+        "data_first_hour": "2020-05-01 00:00:00+00:00"
+      }
+    }
+  },
+  "calibration": {
+    "schema": "paul_wei_behavior_calibration_v1",
+    "label": "固定训练窗后的逐日样本外方向校准，不是交易策略PnL回测",
+    "train_through": "2025-05-03T23:00:00+00:00",
+    "holdout_through": "2026-05-03T23:00:00+00:00",
+    "sample_frequency": "24h",
+    "queries": 359,
+    "stance_counts": {
+      "watch": 318,
+      "short_bias": 21,
+      "long_bias": 12,
+      "mixed": 5,
+      "derisk": 3
+    },
+    "active": {
+      "24h": {
+        "n": 33,
+        "hit_rate": 45.5,
+        "mean_signed_return": 0.00094,
+        "median_signed_return": -0.00064
+      },
+      "72h": {
+        "n": 33,
+        "hit_rate": 42.4,
+        "mean_signed_return": -0.00272,
+        "median_signed_return": -0.00834
+      },
+      "168h": {
+        "n": 33,
+        "hit_rate": 48.5,
+        "mean_signed_return": 0.00199,
+        "median_signed_return": -0.00039
+      }
+    },
+    "stability": {
+      "earlier_active_24h": {
+        "n": 16,
+        "hit_rate": 31.2,
+        "mean_signed_return": -0.0059,
+        "median_signed_return": -0.00668
+      },
+      "later_active_24h": {
+        "n": 17,
+        "hit_rate": 58.8,
+        "mean_signed_return": 0.00739,
+        "median_signed_return": 0.00385
+      },
+      "boundary": "前后半段差异表示稳定性/环境漂移，不表示模型自动成长"
+    }
+  }
+}

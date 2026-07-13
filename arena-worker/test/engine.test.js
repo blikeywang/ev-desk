@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {EXPERTS,analyzeExperts,atr,emaSeries,intervalSeconds,rsi} from "../src/engine.js";
+import {EXPERTS,analyzeExperts,atr,buildPlan,emaSeries,intervalSeconds,rsi} from "../src/engine.js";
 
 function candles(n=240,mode="up"){
   const out=[];
@@ -19,11 +19,13 @@ test("indicator primitives are deterministic",()=>{
   assert.ok(atr(c)>0);
 });
 
-test("all 17 expert identities are returned",()=>{
+test("17 built-in methods and the external Paul Wei identity stay separate",()=>{
   const result=analyzeExperts(candles(),0.0001);
-  assert.equal(EXPERTS.length,17);
+  assert.equal(EXPERTS.length,18);
   assert.equal(result.length,17);
   assert.equal(new Set(result.map(x=>x.id)).size,17);
+  assert.equal(result.some(x=>x.id==="paul_wei"),false);
+  assert.equal(EXPERTS.find(x=>x.id==="paul_wei").kind,"behavior_model");
   assert.ok(result.every(x=>typeof x.name==="string"&&typeof x.regime==="string"));
 });
 
@@ -45,6 +47,19 @@ test("timeframe seconds are explicit",()=>{
   assert.equal(intervalSeconds("1m"),60);
   assert.equal(intervalSeconds("15m"),900);
   assert.equal(intervalSeconds("4h"),14400);
+});
+
+test("macro direction requires at least two independent inputs",()=>{
+  const result=analyzeExperts(candles(),{macro:{dollarChange5d:-0.01,realYieldChange5d:-0.2,vixChange5d:-0.15}});
+  const macro=result.find(x=>x.id==="macro");
+  assert.equal(macro.direction,"long");
+  assert.ok(macro.reason.includes("广义美元"));
+});
+
+test("external directions can use the same audited plan builder",()=>{
+  const plan=buildPlan("long",candles());
+  assert.ok(plan);
+  assert.ok(plan.stop<plan.entry&&plan.target>plan.entry&&plan.rr>0);
 });
 
 test("insufficient history is rejected",()=>{

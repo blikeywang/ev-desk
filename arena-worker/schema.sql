@@ -9,6 +9,18 @@ CREATE TABLE IF NOT EXISTS experts (
   created_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS expert_versions (
+  expert_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  data_dependencies TEXT,
+  rules_hash TEXT,
+  metadata_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(expert_id,version),
+  FOREIGN KEY(expert_id) REFERENCES experts(id)
+);
+
 CREATE TABLE IF NOT EXISTS signals (
   id TEXT PRIMARY KEY,
   expert_id TEXT NOT NULL,
@@ -121,3 +133,49 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_latest
   ON opportunity_snapshots(symbol,timeframe,bar_ts DESC);
 CREATE INDEX IF NOT EXISTS idx_opportunities_rank
   ON opportunity_snapshots(bar_ts DESC,score DESC);
+
+CREATE TABLE IF NOT EXISTS expert_view_snapshots (
+  id TEXT PRIMARY KEY,
+  expert_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  timeframe TEXT NOT NULL,
+  bar_ts INTEGER NOT NULL,
+  observed_at INTEGER NOT NULL,
+  valid_until INTEGER,
+  direction TEXT CHECK(direction IS NULL OR direction IN ('long','short')),
+  stance TEXT,
+  confidence REAL NOT NULL,
+  reason TEXT NOT NULL,
+  action_text TEXT,
+  risk_unit TEXT,
+  entry REAL,
+  stop REAL,
+  target REAL,
+  rr REAL,
+  model_version TEXT NOT NULL,
+  source_url TEXT,
+  evidence_json TEXT NOT NULL,
+  content_hash TEXT NOT NULL,
+  FOREIGN KEY(expert_id) REFERENCES experts(id),
+  UNIQUE(expert_id,symbol,timeframe,bar_ts,model_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expert_views_current
+  ON expert_view_snapshots(symbol,timeframe,bar_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_expert_views_expert
+  ON expert_view_snapshots(expert_id,bar_ts DESC);
+
+CREATE TABLE IF NOT EXISTS market_context_snapshots (
+  id TEXT PRIMARY KEY,
+  symbol TEXT NOT NULL,
+  timeframe TEXT NOT NULL,
+  bar_ts INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  candle_source TEXT NOT NULL,
+  context_json TEXT NOT NULL,
+  UNIQUE(symbol,timeframe,bar_ts)
+);
+
+CREATE INDEX IF NOT EXISTS idx_market_context_current
+  ON market_context_snapshots(symbol,timeframe,bar_ts DESC);

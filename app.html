@@ -179,8 +179,8 @@
   @media(max-width:720px){.arena-kpis{grid-template-columns:repeat(2,1fr)}}
   .arena-kpi{background:#0d111788;border:1px solid var(--border);border-radius:10px;padding:10px}.arena-kpi b{display:block;font-size:20px}.arena-kpi span{font-size:10.5px;color:var(--muted)}
   .audit-strip{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.audit-strip span{font-size:11px;padding:4px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);color:#c9d1d9}
-  .leader{display:grid;gap:8px;margin-top:12px}
-  .leader-row{display:grid;grid-template-columns:minmax(145px,1.25fr) 78px 72px 72px 78px 92px 66px;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:10px 12px;cursor:pointer}
+  .leader{display:grid;gap:8px;margin-top:12px;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:2px}
+  .leader-row{display:grid;grid-template-columns:minmax(145px,1.25fr) 78px 72px 72px 78px 92px 66px;gap:8px;min-width:660px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:10px 12px;cursor:pointer}
   .leader-row:hover{border-color:var(--accent)}.leader-row.head{background:transparent;border:none;color:var(--muted);font-size:10.5px;cursor:default;padding-top:2px;padding-bottom:2px}
   .expert-name{font-weight:750}.expert-meta{font-size:10.5px;color:var(--muted)}.metric{text-align:right;font-variant-numeric:tabular-nums}
   .grade{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:999px;text-align:center}.g-warm{background:#3a4150;color:#c9d1d9}.g-watch{background:#d2992222;color:#e3c07a}.g-good{background:#2ea04322;color:#73d58a}.g-bad{background:#e5534b22;color:#f0776f}
@@ -189,6 +189,11 @@
   .ledger{width:100%;border-collapse:collapse;font-size:11.5px}.ledger th,.ledger td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}.ledger th:first-child,.ledger td:first-child{text-align:left}
   .forward-mini{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-size:10.8px;color:var(--muted);display:flex;justify-content:space-between;gap:6px}
   .forward-mini b{font-variant-numeric:tabular-nums}
+  .market-context{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;margin:0 0 12px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .context-cell{min-width:0;background:var(--panel);padding:9px 10px}.context-cell .ck{display:block;color:var(--muted);font-size:10px;margin-bottom:3px}.context-cell .cv{display:block;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.context-cell .cs{display:block;color:var(--muted);font-size:9.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .evidence-line{margin:8px 0;color:var(--muted);font-size:11px}.evidence-line b{color:var(--text)}
+  @media(max-width:900px){.market-context{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:520px){.market-context{grid-template-columns:repeat(2,minmax(0,1fr))}.context-cell{padding:8px}}
   footer{color:var(--muted);font-size:12px;margin:22px 0 10px;text-align:center}
 </style>
 </head>
@@ -200,7 +205,7 @@
     <div class="status"><span class="dot load" id="sdot"></span><span id="stext">准备加载…</span></div>
   </header>
 
-  <div class="disclaimer">⚠️ 数据由你的浏览器直连交易所实时获取；本面板为分析推演，<b>非投资建议</b>，执行与风控由你决定。 · <a href="tos.html" style="color:#e3c07a">服务条款与隐私</a> · <a href="index.html" style="color:#e3c07a">关于/首页</a></div>
+  <div class="disclaimer">⚠️ 优先使用统一行情服务，未配置时降级为浏览器直连；本面板为分析推演，<b>非投资建议</b>，执行与风控由你决定。 · <a href="tos.html" style="color:#e3c07a">服务条款与隐私</a> · <a href="index.html" style="color:#e3c07a">关于/首页</a></div>
 
   <nav class="nav">
     <a id="nav-desk" class="on" onclick="showPage('desk')">📟 决策台</a>
@@ -248,6 +253,8 @@
     <span class="vmeta" id="nextTick"></span>
   </div>
 
+  <section id="marketContext" class="market-context" aria-live="polite"></section>
+
   <section id="pretradeMap" class="premap" aria-live="polite"></section>
 
   <!-- EV 体检卡 -->
@@ -291,16 +298,18 @@
 
   <div class="page" id="pMe"><div id="meBox" style="margin-top:12px"></div></div>
 
-  <footer id="deskFoot">专家按立场分三栏 · 「回测」看历史，「成长」看启用后的前瞻模拟 · 专家赛场按新收盘K线封存与结算 · 数据源 Binance→OKX→Kraken</footer>
+  <footer id="deskFoot">当前观点只使用已收盘K线 · 历史证据与前向成长严格分开 · 数据源与规则版本可追溯</footer>
 </div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeDetail()"><div class="sheet"></div></div>
 
+<script src="data/expert-evidence.js"></script>
+<script src="data/paul-wei-live.js"></script>
 <script src="config.js"></script>
 <script>
 "use strict";
 /* ============ 真实回测战绩(由 build_stats.py 生成) ============ */
-const REALSTATS = {
+const REALSTATS = (window.EV_DESK_DATA&&window.EV_DESK_DATA.historical) || {
  "meta": {
   "source": "Kraken 公共OHLC · 真实回测(backtest_v2: 行情门控+顺势+出场升级, 含0.1%成本, 悲观同根先止损)",
   "note": "历史评估, 非投资建议, 历史表现不代表未来; 样本仍偏小, 需walk-forward坐实",
@@ -754,6 +763,16 @@ function okxSwap(sym){return sym.replace("USDT","-USDT-SWAP");}
 async function jget(url,ms=9000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error(r.status);return await r.json();}
   finally{clearTimeout(t);} }
+let LIVE_CONTEXT={derivatives:null,macro:null,generatedAt:null,mode:"browser"};
+function marketApiBase(){const c=window.EV_DESK_CONFIG||{};return String(c.marketApi||c.arenaApi||"").replace(/\/$/,"");}
+async function fromUnifiedMarket(sym){
+  const base=marketApiBase();if(!base)throw new Error("unified market API not configured");
+  const sl=slots(),wanted=[...new Set(Object.values(sl))],d=await jget(`${base}/api/v1/market/bundle?symbol=${encodeURIComponent(sym)}&timeframes=${encodeURIComponent(wanted.join(','))}`,18000),out={};
+  for(const slot in sl){const item=d.data&&d.data[sl[slot]];if(!item||!Array.isArray(item.candles)||item.candles.length<70)throw new Error(`统一行情缺少 ${sl[slot]}`);out[slot]=item.candles;}
+  LIVE_CONTEXT={derivatives:d.derivatives||null,macro:d.macro||null,generatedAt:d.generated_at||Date.now(),mode:"server"};
+  const sources=[...new Set(Object.values(d.data||{}).map(x=>x.source).filter(Boolean))];
+  return {name:`统一行情 · ${sources.join('/')||'公开源'}`,data:out,context:d};
+}
 
 async function fromBinance(sym){
   const out={};const sl=slots();
@@ -804,6 +823,9 @@ async function fromYahoo(sym){
   return out;
 }
 async function getOHLC(sym){
+  if(marketApiBase()){
+    try{return await fromUnifiedMarket(sym);}catch(e){LIVE_CONTEXT={derivatives:null,macro:null,generatedAt:null,mode:"browser",fallbackReason:e&&e.message||String(e)};}
+  }
   if(!isCrypto(sym)){
     try{ const d=await fromYahoo(sym); return {name:"Yahoo",data:d}; }
     catch(e){ throw new Error("美股/大宗获取失败(CORS代理可能限流,稍后重试): "+(e.message||e)); }
@@ -817,6 +839,8 @@ async function getOHLC(sym){
 }
 async function getFunding(sym){
   // 返回 {rate: 每8h费率(小数), src}  或 null
+  const live=LIVE_CONTEXT.derivatives;
+  if(live&&live.available&&live.fundingRate!=null)return {rate:+live.fundingRate,src:live.source||"统一行情",openInterestUsd:live.openInterestUsd,openInterestChange24h:live.openInterestChange24h,priceChange24h:live.priceChange24h,quoteVolume24h:live.quoteVolume24h};
   try{const d=await jget(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`);
     if(d&&d.lastFundingRate!=null)return {rate:+d.lastFundingRate,src:"Binance"};}catch(e){}
   try{const d=await jget(`https://www.okx.com/api/v5/public/funding-rate?instId=${okxSwap(sym)}`);
@@ -1011,7 +1035,9 @@ function eGrid(){const d=S["4h"],width=d.bm?(d.bu-d.bl)/d.bm:0,trend=Math.abs(d.
 function eSentiment(){
   if(!FUND)return card("情绪","情绪/持仓","数据待接入","-",["资金费率获取失败(可能地区限制或网络)"],"—","—",["—"],"若接入后:费率极端负=底部,过高=多头拥挤");
   const r=FUND.rate, pct=(r*100).toFixed(4), ann=(r*3*365*100).toFixed(1);
+  const oi=FUND.openInterestChange24h??LIVE_CONTEXT.derivatives?.openInterestChange24h;
   const base=[`当前资金费率 ${pct}%/8h (年化约 ${ann}%),来源 ${FUND.src}`];
+  if(Number.isFinite(oi))base.push(`24H未平仓量 ${oi>=0?"+":""}${(oi*100).toFixed(1)}%；持仓扩张只表示参与度上升，不单独判方向`);
   if(r>=0.0005)return card("情绪","情绪/持仓","偏空","中",
     base.concat(["费率明显偏高,多头拥挤付费,情绪派逆向看空","警惕多头踩踏/回调"]),
     `激进者高位试空 / 稳健者等价格转弱`,`近端摆动高 ${f(L.swHi)} 上方`,[f(L.dcLo),f(L.swLo)],"费率回落至中性则观点失效");
@@ -1024,7 +1050,44 @@ function eSentiment(){
     base.concat(["费率小幅为负,空头略拥挤,情绪派轻度看多"]),"轻仓试多",`${f(L.dcLo)} 下方`,[f(L.dcHi)],"费率转正");
   return card("情绪","情绪/持仓","中性","低",
     base.concat(["费率处中性区间,多空情绪不极端,情绪派无信号"]),"等费率走向极端(过高看空/深负看多)","—",[`极端阈值 ±0.05%/8h`],"—");}
-function eMacro(){return card("宏观","全球宏观","数据待接入","-",["需利率/DXY/风险偏好/ETF流(浏览器端暂未接)"],"—","—",["—"],"若接入后:DXY走弱+流动性宽松利多BTC");}
+function paulFeed(){return window.EV_DESK_DATA&&window.EV_DESK_DATA.paulWei;}
+function paulSnapshot(sym=curSym){const feed=paulFeed();return feed&&feed.snapshots&&feed.snapshots[sym]||null;}
+async function refreshPaulFromArena(sym=curSym){
+  const base=arenaApiBase()||marketApiBase();if(!base||!isCrypto(sym))return false;
+  try{
+    const d=await jget(`${base}/api/v1/arena/views?symbol=${encodeURIComponent(sym)}&timeframe=1h`,7000),view=(d.items||[]).find(x=>x.expert_id==="paul_wei"),snapshot=view&&view.evidence&&view.evidence.model_output;
+    if(!snapshot)return false;
+    window.EV_DESK_DATA=window.EV_DESK_DATA||{};
+    const feed=window.EV_DESK_DATA.paulWei=window.EV_DESK_DATA.paulWei||{schema:"ev_desk_paul_wei_feed_v1",snapshots:{},sources:{},calibration:null};
+    feed.snapshots=feed.snapshots||{};feed.sources=feed.sources||{};feed.snapshots[sym]=snapshot;
+    feed.sources[sym]={market:"EV Desk expert view service",as_of:snapshot.evidence&&snapshot.evidence.query_hour||new Date(view.bar_ts*1000).toISOString()};
+    feed.generated_at=new Date((view.observed_at||Date.now())*(view.observed_at&&view.observed_at<1e12?1000:1)).toISOString();
+    return true;
+  }catch(e){return false;}
+}
+function ePaulWei(){const feed=paulFeed(),x=paulSnapshot();
+  if(!feed||!x)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`${curSym.replace("USDT","")} 尚无同构1H特征评分文件`],"—","—",["—"],"这是重建行为模型，不是 Paul Wei 本人实时发言；补充结构化数据后才启用。");
+  const c=x.coaching||{},p=x.action_probs||{},g=c.action_groups||{},e=x.evidence||{},q=new Date(e.query_hour),age=(Date.now()-q.getTime())/3600000;
+  if(!Number.isFinite(q.getTime())||age>3)return card("Paul Wei 重建","行为概率模型","数据待接入","-",[`观点文件已过期：${e.query_hour||"未知时点"}`,"过期观点不会进入评审团或前向赛场"],"—","—",["—"],"运行 Paul Wei feed 更新器后自动恢复；禁止把旧观点伪装成实时观点。");
+  const stance=c.stance||"watch",dir=stance==="long_bias"?"偏多(低频条件)":stance==="short_bias"?"偏空(低频条件)":stance==="derisk"?"中性(减风险)":stance==="mixed"?"中性(混合)":"中性(不动)",conf=c.confidence||"低",no=p.no_action||0;
+  const reasons=[`无动作概率 ${(no*100).toFixed(1)}%；先回答“是否应该动”，再讨论方向`,`进攻多/空 ${(100*(g.offensive_long||0)).toFixed(1)}% / ${(100*(g.offensive_short||0)).toFixed(1)}%；减多 ${(100*(g.derisk_long||0)).toFixed(1)}%`,`动作语言：${c.suggested_action||"观察"}；风险单位 ${c.suggested_risk_unit||"0R"}`,`${x.market_profile&&x.market_profile.transfer_mode==="native"?"BTC原生行为相似度":"跨资产迁移"} · 评分时点 ${q.toLocaleString()}`];
+  const note="方向语言来自 Paul Wei 历史行为重建；下方进出场价位由 EV Desk 独立关键位引擎生成。Sell/减多优先解释为降风险，只有 open_short/add_short/reverse_long_to_short 才属于进攻空头。";
+  if(stance==="long_bias")return card("Paul Wei 重建","行为概率模型",dir,conf,reasons,`回踩 ${f(L.e20)} 或 ${f(L.dcLo)} 后出现确认`,`${f(L.e50)} / 结构低点下方`,[f(L.dcHi),f(L.swHi)],"结构转弱或活跃概率回落",note);
+  if(stance==="short_bias")return card("Paul Wei 重建","行为概率模型",dir,conf,reasons,`反弹 ${f(L.e20)} 或 ${f(L.dcHi)} 后转弱`,`${f(L.e50)} / 结构高点上方`,[f(L.dcLo),f(L.swLo)],"结构转强或空头动作概率回落",note);
+  return card("Paul Wei 重建","行为概率模型",dir,conf,reasons,"不入场；等待活跃概率与价格结构同时成立","—",[f(L.dcLo),f(L.dcHi)],"新1H数据改变动作组排序",note);
+}
+function eMacro(){const m=LIVE_CONTEXT.macro;
+  if(!m||!m.available)return card("宏观","全球宏观","数据待接入","-",[`FRED宏观数据未启用：${m&&m.reason||"统一行情服务未配置"}`],"—","—",["—"],"宏观观点至少需要美元、实际利率、波动率、流动性中的两项；不会用单一指标硬判方向。");
+  let score=0,n=0;const parts=[],latest=m.latest||{};
+  if(Number.isFinite(m.dollarChange5d)){n++;score+=m.dollarChange5d<=-.005?1:m.dollarChange5d>=.005?-1:0;parts.push(`广义美元5日 ${(m.dollarChange5d*100).toFixed(1)}%`);}
+  if(Number.isFinite(m.realYieldChange5d)){n++;score+=m.realYieldChange5d<=-.1?1:m.realYieldChange5d>=.1?-1:0;parts.push(`10Y实际利率5日 ${m.realYieldChange5d>=0?"+":""}${m.realYieldChange5d.toFixed(2)}pct`);}
+  if(Number.isFinite(m.vixChange5d)){n++;score+=m.vixChange5d<=-.1?.5:m.vixChange5d>=.1?-.5:0;parts.push(`VIX 5日 ${(m.vixChange5d*100).toFixed(1)}%`);}
+  if(Number.isFinite(m.fedBalanceChange4w)){n++;score+=m.fedBalanceChange4w>0?.5:m.fedBalanceChange4w<0?-.5:0;parts.push(`Fed资产负债表4周 ${m.fedBalanceChange4w>=0?"扩张":"收缩"}`);}
+  parts.push(`当前10Y ${Number.isFinite(latest.nominal10y)?latest.nominal10y.toFixed(2)+"%":"—"} / 实际利率 ${Number.isFinite(latest.real10y)?latest.real10y.toFixed(2)+"%":"—"} / VIX ${Number.isFinite(latest.vix)?latest.vix.toFixed(1):"—"}`);
+  parts.push("宏观只做风险环境过滤，具体入场仍等价格结构触发");
+  if(n>=2&&score>=1.5)return card("宏观","全球宏观","偏多(环境)","低",parts,`价格回踩 ${f(L.e20)} 或关键支撑后确认`,`结构止损 ${f(L.e50)} 下方`,[f(L.dcHi),f(L.swHi)],"美元与实际利率同步转强");
+  if(n>=2&&score<=-1.5)return card("宏观","全球宏观","偏空(环境)","低",parts,`反弹 ${f(L.e20)} 或关键阻力后确认`,`结构止损 ${f(L.e50)} 上方`,[f(L.dcLo),f(L.swLo)],"美元与实际利率同步转弱");
+  return card("宏观","全球宏观","中性(混合)","低",parts,"等待宏观与价格结构同向","—",[f(L.dcLo),f(L.dcHi)],"—");}
 
 /* ===== 关键位检测(支撑阻力): 摆动聚类 + 整数关口 ; 供 关键位专家 与 EV卡 复用 ===== */
 function niceStep(p){return p>=10000?1000:p>=1000?100:p>=100?10:p>=10?1:Math.max(0.01,+(p*0.01).toFixed(4));}
@@ -1168,7 +1231,7 @@ function eKeyLevel(){
   return card("关键位","支撑阻力(S/R)","中性","低",["关键位不足"],"—","—",["—"],"—");
 }
 
-const ROSTER=[eTrend,eDow,eBrooks,eWyckoff,eChan,eSMC,eLiquidity,eKeyLevel,eVolumeProfile,eVWAP,eFib,eIchimoku,eMeanrev,eMomentum,eGrid,eSentiment,eMacro];
+const ROSTER=[ePaulWei,eTrend,eDow,eBrooks,eWyckoff,eChan,eSMC,eLiquidity,eKeyLevel,eVolumeProfile,eVWAP,eFib,eIchimoku,eMeanrev,eMomentum,eGrid,eSentiment,eMacro];
 const TECH=["老趋势","道氏","Brooks","威科夫","缠师","SMC","ICT流动性","关键位","成交量分布","锚定VWAP","斐波","一目均衡","回归","因子"];
 
 /* ============ 状态/渲染/加权 ============ */
@@ -1202,6 +1265,14 @@ function renderLevels(srcName){
     (FUND?`<span>资金费率 <b>${(FUND.rate*100).toFixed(4)}%/8h</b></span>`:`<span style="color:var(--warn)">资金费率:不可用</span>`);
   renderPretradeMap();
 }
+function compactMoney(x){if(!Number.isFinite(+x))return"—";const n=+x,a=Math.abs(n);return a>=1e12?(n/1e12).toFixed(2)+"T":a>=1e9?(n/1e9).toFixed(2)+"B":a>=1e6?(n/1e6).toFixed(1)+"M":fmt(n);}
+function contextCell(key,value,sub=""){return `<div class="context-cell"><span class="ck">${key}</span><span class="cv">${value}</span><span class="cs">${sub||"—"}</span></div>`;}
+function macroLabel(m){if(!m||!m.available)return["未启用",m&&m.reason||"需统一数据服务 + FRED"];
+  let score=0,n=0;if(Number.isFinite(m.dollarChange5d)){n++;score+=m.dollarChange5d<=-.005?1:m.dollarChange5d>=.005?-1:0;}if(Number.isFinite(m.realYieldChange5d)){n++;score+=m.realYieldChange5d<=-.1?1:m.realYieldChange5d>=.1?-1:0;}if(Number.isFinite(m.vixChange5d)){n++;score+=m.vixChange5d<=-.1?.5:m.vixChange5d>=.1?-.5:0;}if(Number.isFinite(m.fedBalanceChange4w)){n++;score+=m.fedBalanceChange4w>0?.5:m.fedBalanceChange4w<0?-.5:0;}
+  return[n<2?"输入不足":score>=1.5?"风险环境偏宽松":score<=-1.5?"风险环境偏收紧":"宏观信号混合",`FRED · ${m.asOf||"时点未知"}`];}
+function renderMarketContext(){const d=LIVE_CONTEXT.derivatives||{},m=macroLabel(LIVE_CONTEXT.macro),main=window.DALL&&window.DALL["4h"],bar=main&&main.at(-1),barTime=bar?new Date(bar[0]*1000).toLocaleString():"—",fund=FUND&&Number.isFinite(FUND.rate)?`${(FUND.rate*100).toFixed(4)}% / 8h`:"—",change=Number.isFinite(d.priceChange24h)?`${d.priceChange24h>=0?"+":""}${(d.priceChange24h*100).toFixed(2)}%`:"—",oi=Number.isFinite(d.openInterestUsd)?`$${compactMoney(d.openInterestUsd)}`:"—",oiSub=Number.isFinite(d.openInterestChange24h)?`24H ${d.openInterestChange24h>=0?"+":""}${(d.openInterestChange24h*100).toFixed(1)}%`:"24H变化不可用";
+  document.getElementById("marketContext").innerHTML=contextCell("行情链路",LIVE_CONTEXT.mode==="server"?"统一服务":"浏览器降级",window.CURSRC||LIVE_CONTEXT.fallbackReason||"等待数据")+contextCell("最近K线",barTime,`${curTF} 视图 · ${main&&main.length||0}根`)+contextCell("24H价格",change,d.source||"现货/永续上下文")+contextCell("资金费率",fund,FUND?FUND.src:"不可用")+contextCell("未平仓价值",oi,oiSub)+contextCell("宏观环境",m[0],m[1]);
+}
 function cardInner(c){
   const st=state[c.name];
   const reasons=c.reasons.map(r=>`<li>${r}</li>`).join("");
@@ -1216,11 +1287,12 @@ function cardInner(c){
     <label>权重</label><input type="range" min="1" max="5" step="1" value="${st.w}" oninput="setW('${c.name}',this.value)">
     <span class="wval" id="wv-${cssId(c.name)}">${st.w}</span></div>`;
   let mini="";
-  if(!st.na){const s=statFor(c.name);
-    const body = s
-      ? `胜率<b class="${s.win>=50?'win':''}">${s.win}%</b> · 期望<b class="${s.ev>=0?'win':'neg'}">${s.ev>=0?'+':''}${s.ev}R</b> · 盈亏比<b>${s.pf}</b> <span style="opacity:.7">(${s.trades}笔)</span>`
-      : `<span style="opacity:.7">回测:该标的/周期待接入</span>`;
-    mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">📈 回测 ›</span></div>`;}
+  if(!st.na){
+    if(c.name==="Paul Wei 重建"){
+      const cal=paulFeed()&&paulFeed().calibration,a=cal&&cal.active&&cal.active["24h"],body=a&&a.n?`样本外方向校准 <b>${a.n}</b> 次 · 24H命中 <b class="${a.hit_rate>=50?'win':'neg'}">${a.hit_rate}%</b> · 均值 <b>${a.mean_signed_return>=0?'+':''}${(a.mean_signed_return*100).toFixed(2)}%</b>`:`<span style="opacity:.7">行为校准待接入</span>`;
+      mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openPaulEvidence()">证据 ›</span></div>`;
+    }else{const s=statFor(c.name),body=s?`胜率<b class="${s.win>=50?'win':''}">${s.win}%</b> · 期望<b class="${s.ev>=0?'win':'neg'}">${s.ev>=0?'+':''}${s.ev}R</b> · 盈亏比<b>${s.pf}</b> <span style="opacity:.7">(${s.trades}笔)</span>`:`<span style="opacity:.7">回测:该标的/周期待接入</span>`;
+      mini=`<div class="statmini">${body}<span class="track" onclick="event.stopPropagation();openDetail('${c.name}')">回测 ›</span></div>`;}}
   const fs=st.na?null:forwardStats(c.name),fm=fs&&fs.n?`前瞻 ${fs.n}笔 · EV <b style="color:${fs.ev>=0?"#73d58a":"#f0776f"}">${fs.ev>=0?"+":""}${fs.ev.toFixed(2)}R</b>`:"前瞻样本收集中";
   const forward=st.na?"":`<div class="forward-mini"><span>${fm}</span><span class="track" onclick="event.stopPropagation();openExpertLab('${c.name}')">🏟️ 成长 ›</span></div>`;
   return `<span class="selmark">✓ 已选</span>
@@ -1249,7 +1321,7 @@ function renderCards(){
 /* ====== 专家战绩: 读真实回测 stats.json; 无数据则返回 null(不编造) ====== */
 function realStats(name,sym,tf){
   try{ const s=REALSTATS.stats[name][symKey(sym)][tf];
-    return s? {win:s.win,ev:s.ev,pf:s.pf,trades:s.n,curve:s.curve||[]} : null; }
+    return s? {win:s.win,ev:s.ev,pf:s.pf,trades:s.n,curve:s.curve||[],mdd:s.mdd,winCi:s.win_ci95,evCi:s.ev_ci95,totalR:s.total_r,drift:s.drift_90d,recentEv:s.recent_90d_ev,priorEv:s.prior_90d_ev,regimes:s.regimes||{}} : null; }
   catch(e){ return null; }
 }
 function statFor(name){ return getStat(name,curSym,curTF); }
@@ -1260,12 +1332,25 @@ function curveSVG(curve){
   const col=curve[curve.length-1]>=0?'#2ea043':'#e5534b';
   return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><line x1="0" y1="${zy}" x2="${w}" y2="${zy}" stroke="#2a3240" stroke-dasharray="3 3"/><polyline fill="none" stroke="${col}" stroke-width="2" points="${pts}"/></svg>`;
 }
+function evidenceScope(sym,tf){return (REALSTATS.meta&&REALSTATS.meta.scopes||[]).find(x=>x.symbol===sym&&x.timeframe===tf)||null;}
+function evidenceBoundary(){const m=REALSTATS.meta&&REALSTATS.meta.methodology;if(!m)return (REALSTATS.meta&&REALSTATS.meta.note)||"历史表现不代表未来";return `只用已收盘K线 · 挂单${m.pending_expiry_bars}根失效 · 持仓${m.max_hold_bars}根超时 · 同根${m.same_bar_rule==="stop first"?"先止损":"按设定顺序"} · 往返成本${m.round_trip_cost_pct}%`;}
+function openPaulEvidence(){const feed=paulFeed(),x=paulSnapshot(),el=document.getElementById("modal");if(!feed||!x){el.querySelector(".sheet").innerHTML='<span class="closeX" onclick="closeDetail()">✕</span><div class="demoflag">当前标的没有 Paul Wei 同构特征评分文件，不能展示或编造行为证据。</div>';el.classList.add("on");return;}const c=x.coaching||{},p=x.action_probs||{},g=c.action_groups||{},e=x.evidence||{},cal=feed.calibration||{},a=cal.active&&cal.active["24h"]||{},early=cal.stability&&cal.stability.earlier_active_24h||{},late=cal.stability&&cal.stability.later_active_24h||{},examples=(x.similar_examples||[]).slice(0,5).map(r=>`<tr><td>${new Date(r.event_hour).toLocaleDateString()}</td><td>${r.action_type}</td><td>${r.hourly_state||"—"}</td><td>${Number.isFinite(+r.risk_direction_fwd_24h)?(+r.risk_direction_fwd_24h*100).toFixed(1)+"%":"—"}</td></tr>`).join("");
+  const actionRows=Object.entries(p).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>`<tr><td>${k}</td><td>${(v*100).toFixed(1)}%</td></tr>`).join("");
+  el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>Paul Wei 重建 · 行为证据</h3>
+    <div class="ctx">${x.market_profile&&x.market_profile.label||curSym} · ${e.query_hour||"—"} · 模型 ${feed.model&&feed.model.version||"—"}</div>
+    <div class="kpis"><div class="kpi"><div class="n">${((p.no_action||0)*100).toFixed(1)}%</div><div class="l">无动作概率</div></div><div class="kpi"><div class="n">${((e.material_action_weight_share||0)*100).toFixed(1)}%</div><div class="l">实质动作概率</div></div><div class="kpi"><div class="n">${a.n||0}</div><div class="l">样本外方向样本</div></div><div class="kpi"><div class="n">${a.hit_rate==null?"—":a.hit_rate+"%"}</div><div class="l">24H方向命中</div></div></div>
+    <div class="evidence-line"><b>当前教练语言：</b>${c.suggested_action||"观察"} · ${c.suggested_risk_unit||"0R"} · 进攻多/空 ${((g.offensive_long||0)*100).toFixed(1)}% / ${((g.offensive_short||0)*100).toFixed(1)}%</div>
+    <div class="evidence-line"><b>样本外稳定性：</b>前半段 ${early.n||0} 次、命中 ${early.hit_rate==null?"—":early.hit_rate+"%"}；后半段 ${late.n||0} 次、命中 ${late.hit_rate==null?"—":late.hit_rate+"%"}。这表示环境漂移，不是模型自动成长。</div>
+    <div class="ctx" style="margin-top:12px">动作概率</div><table class="tf-tbl"><tr><th>动作</th><th>概率</th></tr>${actionRows}</table>
+    <div class="ctx" style="margin-top:12px">最相似的历史非观察情境</div><table class="tf-tbl"><tr><th>时间</th><th>动作</th><th>结构</th><th>24H后</th></tr>${examples||'<tr><td colspan="4">暂无</td></tr>'}</table>
+    <div class="demoflag">${feed.model&&feed.model.boundary||"行为相似度评分，不是价格预测。"} 样本外校准只评估方向后的市场变化，不等同可执行PnL；具体进出场由 EV Desk 关键位引擎独立生成。</div>`;el.classList.add("on");}
 function openDetail(name){
+  if(name==="Paul Wei 重建"){openPaulEvidence();return;}
   const s=statFor(name),el=document.getElementById("modal");
   const rows=["1m","5m","15m","1h","4h","1d"].map(tf=>{const st=getStat(name,curSym,tf);
     const cur=tf===curTF?'cur':'';
     if(!st) return `<tr class="${cur}"><td>${tf}</td><td colspan="4" style="text-align:center;color:var(--muted)">— 待接入 —</td></tr>`;
-    const small=st.trades<20?' <span style="color:#e3c07a">⚠小样本</span>':'';
+    const small=st.trades<30?' <span style="color:#e3c07a">小样本</span>':'';
     return `<tr class="${cur}"><td>${tf}</td><td>${st.win}%</td><td style="color:${st.ev>=0?'#4ac26b':'#f0776f'}">${st.ev>=0?'+':''}${st.ev}R</td><td>${st.pf}</td><td>${st.trades}${small}</td></tr>`;}).join('');
   const kpis = s ? `
     <div class="kpis">
@@ -1274,17 +1359,19 @@ function openDetail(name){
       <div class="kpi"><div class="n">${s.pf}</div><div class="l">盈亏比</div></div>
       <div class="kpi"><div class="n">${s.trades}</div><div class="l">样本笔数</div></div>
     </div>
-    ${s.trades<20?'<div class="ctx" style="color:#e3c07a">⚠ 当前周期样本偏小(&lt;20笔)，仅供参考，需更多数据坐实。</div>':''}
-    <div class="ctx" style="margin:4px 0">累计盈亏(R) · 成长曲线</div>${curveSVG(s.curve&&s.curve.length?s.curve:[0])}`
-    : `<div class="demoflag" style="margin:10px 0">该「专家 × 标的 × 周期」暂无回测数据。加密仅覆盖已抓取的周期；美股/大宗需后端接数据源后由 build_stats.py 生成。</div>`;
+    ${s.trades<30?'<div class="ctx" style="color:#e3c07a">当前周期样本少于30笔，置信区间仍会很宽。</div>':''}
+    <div class="evidence-line"><b>95%区间：</b>胜率 ${s.winCi?s.winCi.join('%–')+'%':'—'} · EV ${s.evCi?s.evCi.join('R – ')+'R':'—'} · 最大回撤 ${Number.isFinite(s.mdd)?s.mdd+'R':'—'} · 90日环境漂移 ${s.drift==null?'样本不足':(s.drift>=0?'+':'')+s.drift+'R'}</div>
+    <div class="ctx" style="margin:4px 0">累计盈亏(R) · 历史回测曲线</div>${curveSVG(s.curve&&s.curve.length?s.curve:[0])}`
+    : `<div class="demoflag" style="margin:10px 0">该「专家 × 标的 × 周期」暂无正式历史证据。未覆盖的数据不会用浏览器短样本补成战绩。</div>`;
+  const scope=evidenceScope(curSym,curTF),scopeText=scope?`${new Date(scope.from).toLocaleDateString()}–${new Date(scope.through).toLocaleDateString()} · ${scope.candles}根K线`:"该范围待接入";
   el.querySelector(".sheet").innerHTML=`
     <span class="closeX" onclick="closeDetail()">✕</span>
     <h3>${name} · 战绩（真实回测）</h3>
-    <div class="ctx">${curSym.replace('USDT','/USDT')} · ${curTF} 周期 · ${(REALSTATS.meta&&REALSTATS.meta.source)||'历史回测'}</div>
+    <div class="ctx">${curSym.replace('USDT','/USDT')} · ${curTF} · ${scopeText}</div>
     ${kpis}
     <div class="ctx" style="margin:12px 0 4px">该专家在各周期的表现（当前周期高亮 · 无数据=待接入）</div>
     <table class="tf-tbl"><tr><th>周期</th><th>胜率</th><th>期望</th><th>盈亏比</th><th>样本</th></tr>${rows}</table>
-    <div class="demoflag">数据来源：${(REALSTATS.meta&&REALSTATS.meta.source)||'—'}。${(REALSTATS.meta&&REALSTATS.meta.note)||''}</div>
+    <div class="demoflag">数据来源：${(REALSTATS.meta&&REALSTATS.meta.source)||'—'} · 引擎 ${(REALSTATS.meta&&REALSTATS.meta.engine_version)||'—'} · ${evidenceBoundary()}。历史90日差异是环境漂移，不是专家自动成长；成长只看前向赛场。</div>
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="ev-cta" style="flex:1" onclick="setSelFromDetail('${name}',true)">信它 · 选入评审团</button>
       <button class="ev-cta ghost" style="flex:1" onclick="setSelFromDetail('${name}',false)">不信 · 移出</button></div>`;
@@ -1467,8 +1554,10 @@ function runBacktestAll(){ // 对当前已加载的4个槽位序列各跑一遍,
     LIVESTATS[k][canon]=bucket;}
 }
 function getStat(name,sym,tf){const k=symKey(sym);
+  const official=realStats(name,sym,tf);if(official)return official;
+  if(REALSTATS.schema==="ev_desk_expert_evidence_v3")return null;
   if(LIVESTATS[k]&&LIVESTATS[k][tf]&&LIVESTATS[k][tf][name])return LIVESTATS[k][tf][name];
-  try{const s=REALSTATS.stats[name][k][tf];return s?{win:s.win,ev:s.ev,pf:s.pf,trades:s.n,curve:s.curve||[]}:null;}catch(e){return null;}}
+  return null;}
 
 /* ============ 专家前瞻赛场: 信号封存 → 模拟成交 → 不可回删结算 ============ */
 const LAB_KEY="expertForwardArenaV1",LAB_VERSION=1;
@@ -1581,10 +1670,13 @@ async function openRemoteExpert(id){
   const el=document.getElementById("modal");el.querySelector(".sheet").innerHTML='<div class="ctx">加载公共前瞻档案…</div>';el.classList.add("on");
   try{const d=await arenaGet("/api/v1/arena/experts/"+encodeURIComponent(id)),s=d.stats||{},e=d.expert||{},T=d.trades||[],P=d.positions||[],g=remoteGrade(s.status);
     const ledger=T.slice(0,20).map(t=>`<tr><td>${new Date(t.closed_bar_ts*1000).toLocaleDateString()}</td><td>${t.symbol.replace("USDT","")} · ${t.timeframe}</td><td>${t.direction==="long"?"多":"空"}</td><td style="color:${t.net_r>=0?"#73d58a":"#f0776f"}">${t.net_r>=0?"+":""}${(+t.net_r).toFixed(2)}R</td><td>${t.close_reason}</td></tr>`).join("");
+    const hist=realStats(e.name,curSym,curTF),cal=paulFeed()&&paulFeed().calibration,a=cal&&cal.active&&cal.active["24h"],historical=e.id==="paul_wei"?(a?`<div class="demoflag"><b>行为样本外校准：</b>${a.n} 个方向样本 · 24H命中 ${a.hit_rate}% · 均值 ${(a.mean_signed_return*100).toFixed(2)}%。这不是PnL回测。</div>`:'<div class="demoflag">Paul Wei 行为校准待接入。</div>'):(hist?`<div class="demoflag"><b>独立历史证据：</b>${curSym.replace("USDT","")} ${curTF} · ${hist.trades}笔 · EV ${hist.ev>=0?"+":""}${hist.ev}R · 95%区间 ${hist.evCi?hist.evCi.join("R – ")+"R":"—"} · MDD ${hist.mdd}R</div>`:'<div class="demoflag">当前标的/周期暂无正式历史证据。</div>');
+    const regimes=Object.entries(d.stats_by_regime||{}).filter(([,v])=>v.n).sort((a,b)=>b[1].ev-a[1].ev),regimeText=regimes.length?`最佳前向环境 ${regimes[0][0]}：${regimes[0][1].n}笔 / ${regimes[0][1].ev>=0?"+":""}${regimes[0][1].ev.toFixed(2)}R`:"环境样本收集中";
     el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><h3>${e.name||id} · 公共前瞻档案</h3><div class="ctx">${e.school||""} · 服务器统一账本 · 可信权重 ${(+s.trust_multiplier||1).toFixed(2)}x</div>
       <div class="kpis"><div class="kpi"><div class="n">${s.n||0}</div><div class="l">前瞻样本</div></div><div class="kpi"><div class="n" style="color:${s.ev>=0?"#73d58a":"#f0776f"}">${s.n?(s.ev>=0?"+":"")+s.ev.toFixed(2):"—"}R</div><div class="l">每笔EV</div></div>
       <div class="kpi"><div class="n">${s.n?s.win_rate.toFixed(0)+"%":"—"}</div><div class="l">胜率</div></div><div class="kpi"><div class="n">${s.n?s.max_drawdown_r.toFixed(1):"—"}R</div><div class="l">最大回撤</div></div></div>
-      <div class="ctx"><span class="grade ${g[1]}">${g[0]}</span>　公共进行中计划 ${P.length} 个</div>
+      <div class="ctx"><span class="grade ${g[1]}">${g[0]}</span>　公共进行中计划 ${P.length} 个 · ${regimeText}</div>
+      ${historical}
       ${s.curve&&s.curve.length?`<div class="ctx">公共累计R曲线</div>${curveSVG(s.curve)}`:'<div class="demoflag">仍在积累公共前瞻样本。</div>'}
       <table class="ledger"><tr><th>结算</th><th>市场</th><th>方向</th><th>结果</th><th>原因</th></tr>${ledger||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">暂无结算记录</td></tr>'}</table>`;
   }catch(e){el.querySelector(".sheet").innerHTML=`<span class="closeX" onclick="closeDetail()">✕</span><div class="demoflag">公共档案加载失败：${e&&e.message||e}</div>`;}
@@ -1635,17 +1727,17 @@ function setStatus(kind,txt){document.getElementById("sdot").className="dot "+ki
 async function refresh(){
   setStatus("load",`加载 ${curSym} · ${curTF} 数据中…`);
   try{
-    const [ohlc,fund]=await Promise.all([getOHLC(curSym),getFunding(curSym)]);
+    const ohlc=await getOHLC(curSym),fund=await getFunding(curSym);await refreshPaulFromArena(curSym);
     FUND=fund; window.DALL=ohlc.data; window.CURSRC=ohlc.name; buildLevels(ohlc.data);
     runBacktestAll();                       // 浏览器端当场算真实战绩
     CARDS=ROSTER.map(fn=>fn());
     forwardStep(curSym,curTF,ohlc.data,CARDS);
-    ensureState(); renderLevels(ohlc.name); renderCards(); recompute();
+    ensureState(); renderLevels(ohlc.name); renderMarketContext(); renderCards(); recompute();
     if(arenaApiBase())refreshRemoteArena();
     document.getElementById("tfLabel").textContent=curTF;
     setStatus("ok",`数据就绪 · ${curTF} · OHLC@${ohlc.name}`+(fund?` · 费率@${fund.src}`:` · 费率不可用`));
   }catch(e){
-    setStatus("bad","数据获取失败:"+(e&&e.message||e)+"（可能是网络/地区限制，稍后重试或换网络）");
+    renderMarketContext();setStatus("bad","数据获取失败:"+(e&&e.message||e)+"（统一服务与浏览器降级链均不可用）");
   }
 }
 /* ---- WebSocket 实时(Binance): 主图周期K线流, tick更新价格/EV, 收盘全量重算 ---- */
@@ -1672,7 +1764,7 @@ function applyLiveKline(k){
   if(k.x){ // 该周期收盘 → 全量重算(正式信号)+ 更新战绩
     buildLevels(window.DALL); runBacktestAll(); CARDS=ROSTER.map(fn=>fn()); ensureState();
     forwardStep(curSym,curTF,window.DALL,CARDS);
-    renderLevels("WS·"+(window.CURSRC||"Binance")); renderCards();
+    renderLevels("WS·"+(window.CURSRC||"Binance")); renderMarketContext(); renderCards();
   }
   recompute(); // 每tick用最新价刷新EV/共识(预览)
 }

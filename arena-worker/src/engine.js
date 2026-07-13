@@ -1,3 +1,5 @@
+export const ENGINE_VERSION = "arena-v2.0.0";
+
 export const EXPERTS = [
   ["trend","老趋势","趋势跟踪"],
   ["dow","道氏","道氏理论"],
@@ -15,8 +17,12 @@ export const EXPERTS = [
   ["momentum","因子","动量/相对强度"],
   ["grid","网格","区间执行"],
   ["sentiment","情绪","资金费率/拥挤"],
-  ["macro","宏观","全球宏观"]
-].map(([id,name,school])=>({id,name,school,version:"arena-v1"}));
+  ["macro","宏观","全球宏观","method_lens","FRED 利率/美元/波动率/流动性"],
+  ["paul_wei","Paul Wei 重建","行为概率模型","behavior_model","Paul Wei teacher dataset + 1H OHLCV"]
+].map(([id,name,school,kind="method_lens",data])=>({
+  id,name,school,kind,data_dependencies:data||"已收盘 OHLCV",
+  version:id==="paul_wei"?"paul-wei-core-v2":ENGINE_VERSION
+}));
 
 const col=(c,i)=>c.map(x=>+x[i]);
 const max=a=>Math.max(...a),min=a=>Math.min(...a);
@@ -81,9 +87,16 @@ function planFor(direction,c,A,zones){
   const entry=Math.max(p,R.lo),stop=R.hi+.35*A,target=(sup.find(z=>z.score>=2.5&&Math.abs(entry-z.hi)/Math.abs(stop-entry)>=1.3)||S).hi,rr=(entry-target)/Math.abs(stop-entry);
   return rr>0?{entry,stop,target,rr,trigger:`触及 ${R.lo.toFixed(6)}–${R.hi.toFixed(6)} 后跌回`,invalid:`收盘站上 ${R.hi.toFixed(6)}`}:null;
 }
+export function buildPlan(direction,candles){
+  const c=candles.map(r=>r.map(Number));
+  if(c.length<80||!['long','short'].includes(direction))return null;
+  const p=c.at(-1)[4],A=atr(c)||p*.01;
+  return planFor(direction,c,A,buildZones(c,A));
+}
 function vote(id,direction,confidence,reason){return{id,direction,confidence,reason};}
-export function analyzeExperts(candles,fundingRate=null){
+export function analyzeExperts(candles,context=null){
   const c=candles.map(r=>r.map(Number));if(c.length<80)throw new Error("at least 80 candles required");
+  const ctx=typeof context==="number"?{fundingRate:context}:(context||{}),fundingRate=ctx.fundingRate??null;
   const closes=col(c,4),p=closes.at(-1),A=atr(c)||p*.01,e20s=emaSeries(closes,20),e50s=emaSeries(closes,50),e20=e20s.at(-1),e50=e50s.at(-1),R=rsi(closes),bb=boll(closes),sw=swingPoints(c),hi=sw.hi,lo=sw.lo;
   const dcH=max(col(c.slice(-20),2)),dcL=min(col(c.slice(-20),3)),range60=max(col(c.slice(-60),2))-min(col(c.slice(-60),3)),pos=(p-dcL)/(dcH-dcL||1),v=col(c,5),surge=v.at(-1)>avg(v.slice(-20))*1.4;
   const trendUp=p>e20&&e20>e50&&e50s.at(-1)>e50s.at(-10),trendDown=p<e20&&e20<e50&&e50s.at(-1)<e50s.at(-10),regime=trendUp?"多头趋势":trendDown?"空头趋势":"区间/过渡";
@@ -106,8 +119,14 @@ export function analyzeExperts(candles,fundingRate=null){
   votes.push(vote("mean_reversion",p<=bb[0]&&R<32?"long":p>=bb[2]&&R>68?"short":null,.58,"布林极值与RSI"));
   const mom=p/closes.at(-16)-1;votes.push(vote("momentum",mom>.05&&R>55?"long":mom<-.05&&R<45?"short":null,.6,"15期动量与RSI"));
   votes.push(vote("grid",null,.3,Math.abs(p-e50)/e50<.03&&range60/p<.09?"适合区间执行":"趋势中不启用网格"));
-  votes.push(vote("sentiment",fundingRate!=null?(fundingRate>=.0005?"short":fundingRate<=-.0003?"long":null):null,.5,"资金费率拥挤度"));
-  votes.push(vote("macro",null,0,"等待独立宏观数据源"));
+  const oi=ctx.openInterestChange24h,oiText=Number.isFinite(oi)?`，24H持仓量${oi>=0?"+":""}${(oi*100).toFixed(1)}%`:"";
+  votes.push(vote("sentiment",fundingRate!=null?(fundingRate>=.0005?"short":fundingRate<=-.0003?"long":null):null,fundingRate==null?0:.5,"资金费率拥挤度"+oiText));
+  const m=ctx.macro||{},macroParts=[];let macroScore=0,macroInputs=0;
+  if(Number.isFinite(m.dollarChange5d)){macroInputs++;macroScore+=m.dollarChange5d<=-.005?1:m.dollarChange5d>=.005?-1:0;macroParts.push(`广义美元5日${(m.dollarChange5d*100).toFixed(1)}%`);}
+  if(Number.isFinite(m.realYieldChange5d)){macroInputs++;macroScore+=m.realYieldChange5d<=-.10?1:m.realYieldChange5d>=.10?-1:0;macroParts.push(`10Y实际利率5日${m.realYieldChange5d>=0?"+":""}${m.realYieldChange5d.toFixed(2)}pct`);}
+  if(Number.isFinite(m.vixChange5d)){macroInputs++;macroScore+=m.vixChange5d<=-.10?.5:m.vixChange5d>=.10?-.5:0;macroParts.push(`VIX 5日${(m.vixChange5d*100).toFixed(1)}%`);}
+  if(Number.isFinite(m.fedBalanceChange4w)){macroInputs++;macroScore+=m.fedBalanceChange4w>0?.5:m.fedBalanceChange4w<0?-.5:0;macroParts.push(`Fed资产负债表4周${m.fedBalanceChange4w>=0?"扩张":"收缩"}`);}
+  votes.push(vote("macro",macroInputs>=2?(macroScore>=1.5?"long":macroScore<=-1.5?"short":null):null,macroInputs>=2?.48:0,macroInputs?macroParts.join("；"):"等待独立宏观数据源"));
   const byId=Object.fromEntries(EXPERTS.map(x=>[x.id,x]));
   return votes.map(v=>{const plan=v.direction?planFor(v.direction,c,A,zones):null;return Object.assign({},byId[v.id],v,{regime,atr:A,price:p,plan:plan&&plan.rr>=1?plan:null});});
 }

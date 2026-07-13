@@ -13,7 +13,12 @@ database_id = "REPLACE_WITH_D1_DATABASE_ID"
 [vars]
 ARENA_SYMBOLS = "BTCUSDT,ETHUSDT,SOLUSDT"
 ARENA_TIMEFRAMES = "15m,1h,4h"
-ARENA_SOURCE = "Binance public market data"
-ALLOWED_ORIGIN = "*"
+ARENA_SOURCE = "Binance -> OKX -> Kraken official public APIs"
+ALPACA_FEED = "iex"
+ALLOWED_ORIGIN = "https://REPLACE_WITH_FRONTEND_ORIGIN"
 
-# Use `wrangler secret put ADMIN_TOKEN` for the optional manual-run endpoint.
+# Secrets:
+# wrangler secret put ADMIN_TOKEN
+# wrangler secret put FRED_API_KEY
+# wrangler secret put ALPACA_KEY_ID
+# wrangler secret put ALPACA_SECRET_KEY
