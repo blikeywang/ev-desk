@@ -56,12 +56,12 @@ function swingPoints(c,look=80){
   return{hi,lo};
 }
 function volumeNodes(c,bins=28){
-  const d=c.slice(-120),lo=min(col(d,3)),hi=max(col(d,2)),step=(hi-lo)/bins;if(!(step>0))return[];
+  const d=c.slice(-120);if(!d.some(r=>+r[5]>0))return[];const lo=min(col(d,3)),hi=max(col(d,2)),step=(hi-lo)/bins;if(!(step>0))return[];
   const v=Array(bins).fill(0);d.forEach(r=>{const p=(r[2]+r[3]+r[4])/3,i=clamp(Math.floor((p-lo)/step),0,bins-1);v[i]+=r[5]||0;});
   return v.map((x,i)=>({p:lo+(i+.5)*step,v:x})).sort((a,b)=>b.v-a.v).slice(0,3);
 }
 function anchoredVWAP(c){
-  const d=c.slice(-80);if(!d.length)return 0;let at=0,rg=-1;
+  const d=c.slice(-80);if(!d.length||!d.some(r=>+r[5]>0))return 0;let at=0,rg=-1;
   d.forEach((r,i)=>{if(r[2]-r[3]>rg){rg=r[2]-r[3];at=i;}});let pv=0,v=0;
   d.slice(at).forEach(r=>{const z=r[5]||1;pv+=(r[2]+r[3]+r[4])/3*z;v+=z;});return v?pv/v:0;
 }
@@ -98,21 +98,21 @@ export function analyzeExperts(candles,context=null){
   const c=candles.map(r=>r.map(Number));if(c.length<80)throw new Error("at least 80 candles required");
   const ctx=typeof context==="number"?{fundingRate:context}:(context||{}),fundingRate=ctx.fundingRate??null;
   const closes=col(c,4),p=closes.at(-1),A=atr(c)||p*.01,e20s=emaSeries(closes,20),e50s=emaSeries(closes,50),e20=e20s.at(-1),e50=e50s.at(-1),R=rsi(closes),bb=boll(closes),sw=swingPoints(c),hi=sw.hi,lo=sw.lo;
-  const dcH=max(col(c.slice(-20),2)),dcL=min(col(c.slice(-20),3)),range60=max(col(c.slice(-60),2))-min(col(c.slice(-60),3)),pos=(p-dcL)/(dcH-dcL||1),v=col(c,5),surge=v.at(-1)>avg(v.slice(-20))*1.4;
+  const dcH=max(col(c.slice(-20),2)),dcL=min(col(c.slice(-20),3)),range60=max(col(c.slice(-60),2))-min(col(c.slice(-60),3)),pos=(p-dcL)/(dcH-dcL||1),v=col(c,5),hasVolume=v.slice(-20).some(x=>x>0),surge=hasVolume&&v.at(-1)>avg(v.slice(-20))*1.4;
   const trendUp=p>e20&&e20>e50&&e50s.at(-1)>e50s.at(-10),trendDown=p<e20&&e20<e50&&e50s.at(-1)<e50s.at(-10),regime=trendUp?"多头趋势":trendDown?"空头趋势":"区间/过渡";
   const votes=[];
   votes.push(vote("trend",trendUp?"long":trendDown?"short":null,.7,trendUp||trendDown?"均线与价格同向":"均线纠缠"));
   const H1=hi.at(-1)?.[1],H0=hi.at(-2)?.[1],L1=lo.at(-1)?.[1],L0=lo.at(-2)?.[1];
   votes.push(vote("dow",H1>H0&&L1>L0?"long":H1<H0&&L1<L0?"short":null,.65,"摆动高低点结构"));
   const bars=c.slice(-12),bull=bars.filter(x=>x[4]>x[1]).length;votes.push(vote("brooks",bull>=8&&p>e20?"long":bull<=4&&p<e20?"short":null,.6,"趋势K与EMA上下文"));
-  votes.push(vote("wyckoff",pos<.3&&surge&&p>closes.at(-2)?"long":pos>.7&&surge&&p<closes.at(-2)?"short":null,.6,"区间位置与量价反应"));
+  votes.push(vote("wyckoff",pos<.3&&surge&&p>closes.at(-2)?"long":pos>.7&&surge&&p<closes.at(-2)?"short":null,hasVolume?.6:0,hasVolume?"区间位置与量价反应":"当前市场没有可用成交量"));
   const mh=macdHist(closes),p1=min(closes.slice(-10)),p2=min(closes.slice(-30,-10)),h1=min(mh.slice(-10)),h2=min(mh.slice(-30,-10)),P1=max(closes.slice(-10)),P2=max(closes.slice(-30,-10)),Hh1=max(mh.slice(-10)),Hh2=max(mh.slice(-30,-10));
   votes.push(vote("chan",p1<p2&&h1>h2?"long":P1>P2&&Hh1<Hh2?"short":null,.58,"价格与MACD柱背驰"));
   const mid=H1!=null&&L1!=null?(H1+L1)/2:p;votes.push(vote("smc",p>(H1||dcH)?"long":p<(L1||dcL)?"short":p<mid?"long":"short",.45,"BOS与供需区位置"));
   const last=c.at(-1),prior=c.slice(-22,-1),ph=max(col(prior,2)),pl=min(col(prior,3));votes.push(vote("ict",last[3]<pl&&last[4]>pl?"long":last[2]>ph&&last[4]<ph?"short":null,.62,"流动性清扫并收回"));
   const zones=buildZones(c,A),S=zones.filter(z=>z.p<p).at(-1),Z=zones.find(z=>z.p>p);votes.push(vote("levels",S&&p-S.p<.55*A?"long":Z&&Z.p-p<.55*A?"short":null,.65,"高汇合支撑阻力"));
-  const nodes=volumeNodes(c),poc=nodes[0]?.p,near=nodes.sort((a,b)=>Math.abs(a.p-p)-Math.abs(b.p-p))[0]?.p;votes.push(vote("volume_profile",near&&Math.abs(p-near)<.7*A?(p>poc?"long":"short"):null,.45,"POC/HVN接受度"));
-  const av=anchoredVWAP(c),dist=(p-av)/A;votes.push(vote("avwap",Math.abs(dist)>.4?(dist>0?"long":"short"):null,.45,"锚定成本上/下方"));
+  const nodes=volumeNodes(c),poc=nodes[0]?.p,near=nodes.sort((a,b)=>Math.abs(a.p-p)-Math.abs(b.p-p))[0]?.p;votes.push(vote("volume_profile",near&&Math.abs(p-near)<.7*A?(p>poc?"long":"short"):null,hasVolume?.45:0,hasVolume?"POC/HVN接受度":"当前市场没有可用成交量"));
+  const av=anchoredVWAP(c),dist=av?(p-av)/A:0;votes.push(vote("avwap",av&&Math.abs(dist)>.4?(dist>0?"long":"short"):null,hasVolume?.45:0,hasVolume?"锚定成本上/下方":"当前市场没有可用成交量"));
   const H=max(col(c.slice(-60),2)),L=min(col(c.slice(-60),3)),retr=(H-p)/(H-L||1);votes.push(vote("fib",retr>=.5&&retr<=.66?"long":retr>.85?"short":null,.5,"波段回撤比例"));
   const midN=n=>{const d=c.slice(-n);return(max(col(d,2))+min(col(d,3)))/2},ten=midN(9),kij=midN(26),sa=(ten+kij)/2,sb=midN(52),top=Math.max(sa,sb),bot=Math.min(sa,sb);
   votes.push(vote("ichimoku",p>top&&ten>kij?"long":p<bot&&ten<kij?"short":null,.62,"云层与转换/基准线"));

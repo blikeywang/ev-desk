@@ -52,8 +52,8 @@
   <div class="top">
     <div class="logo">正<b>EV</b>决策台</div>
     <div style="display:flex;gap:10px;align-items:center">
-      <a class="note" href="#join" style="color:var(--muted)">加入等候列表</a>
-      <a class="cta" href="app.html">免费试用 Demo →</a>
+      <a class="note" href="https://github.com/blikeywang/ev-desk/issues" target="_blank" rel="noopener" style="color:var(--muted)">反馈建议</a>
+      <a class="cta" href="app.html">打开决策台 →</a>
     </div>
   </div>
 
@@ -121,14 +121,13 @@
   </section>
 
   <section>
-    <h2>专家也要经得起未来行情</h2>
-    <p class="lead">不靠事后解释。每个计划先封存，再等待市场判卷。</p>
+    <h2>教练也要用战绩说话</h2>
+    <p class="lead">历史证据、跨市场训练与 Paul Wei 行为记录分别展示，没有记录就明确说明。</p>
     <div class="cards">
-      <div class="card"><div class="ic">🔒</div><h3>信号先封存</h3><p>记录产生时间、市场环境、方向、进场、止损和目标；失败计划不能从账本里删除。</p></div>
-      <div class="card"><div class="ic">⚖️</div><h3>统一悲观结算</h3><p>所有流派使用同一执行层；同一根K线同时碰止损和目标时，按先止损处理，并计入成本。</p></div>
-      <div class="card"><div class="ic">🧠</div><h3>有证据地成长</h3><p>比较近期与此前EV，识别各自适用的趋势/震荡环境；小样本强制收缩，失效专家自动降权。</p></div>
+      <div class="card"><div class="ic">📋</div><h3>17 位教练逐一列出</h3><p>当前市场有正式战绩就显示当前范围；没有覆盖时显示 BTC、ETH、NQ、ES 的训练结果或未参赛原因。</p></div>
+      <div class="card"><div class="ic">⚖️</div><h3>统一保守结算</h3><p>所有方法使用同一执行口径；同一根K线同时碰止损和目标时按先止损处理，并计入成本。</p></div>
+      <div class="card"><div class="ic">🧠</div><h3>Paul Wei 行为证据</h3><p>用真实成交重建进攻、减仓与退出倾向，再由独立价位引擎给出进场、止损、目标和加减仓计划。</p></div>
     </div>
-    <div class="disc">当前 Demo 的前瞻赛场保存在你的浏览器中，只在页面运行时更新；正式付费版需使用统一服务端时钟、24小时行情任务和可验证账本。</div>
   </section>
 
   <!-- 市场 -->
@@ -137,35 +136,15 @@
     <p class="lead">一个面板，多市场多周期（1m 到 1d）。</p>
     <div class="mkts">
       <span class="chip">加密 BTC/ETH/SOL…</span><span class="chip">美股 AAPL/NVDA/SPY/QQQ</span>
+      <span class="chip">US Tech 100 / Nasdaq-100</span>
       <span class="chip">大宗 黄金/原油</span><span class="chip">周期 1m·5m·15m·1h·4h·1d</span>
     </div>
     <div style="display:flex;gap:20px;margin-top:22px;flex-wrap:wrap">
       <div><div class="kpi" style="color:var(--long2)">17</div><div class="note">流派视角</div></div>
       <div><div class="kpi">6</div><div class="note">时间周期</div></div>
-      <div><div class="kpi">100%</div><div class="note">浏览器端实时回测</div></div>
+      <div><div class="kpi">4</div><div class="note">训练市场 BTC/ETH/NQ/ES</div></div>
     </div>
     <div style="margin-top:26px"><a class="cta big" href="app.html">开始体验 →</a></div>
-  </section>
-
-  <!-- 等候列表 / 反馈 -->
-  <section id="join">
-    <h2>加入等候列表</h2>
-    <p class="lead">留个邮箱，新功能（多市场预警、完整战绩、DC/TG 社区）上线第一时间通知你。也欢迎告诉我们你最想要什么。</p>
-    <form id="wf" action="https://formspree.io/f/YOUR_FORM_ID" method="POST" onsubmit="return onWait(event)"
-      style="display:flex;gap:10px;flex-wrap:wrap;max-width:560px">
-      <input name="email" type="email" required placeholder="你的邮箱"
-        style="flex:2;min-width:200px;background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:12px 14px;font-size:14px">
-      <input name="want" placeholder="你最想要的功能(可选)"
-        style="flex:2;min-width:200px;background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:12px 14px;font-size:14px">
-      <button class="cta" type="submit" style="border:none;cursor:pointer">加入 →</button>
-    </form>
-    <div id="wmsg" class="note" style="margin-top:10px;color:var(--long2)"></div>
-    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-      <a class="cta ghost" id="tgLink" href="#" onclick="return needSetup('Telegram')">💬 Telegram 群</a>
-      <a class="cta ghost" id="dcLink" href="#" onclick="return needSetup('Discord')">🎮 Discord</a>
-      <a class="cta ghost" id="fbLink" href="https://github.com/blikeywang/ev-desk/issues" target="_blank" rel="noopener">✉️ 反馈建议</a>
-    </div>
-    <div class="note" style="margin-top:10px">数据只用于产品通知与改进，不出售第三方。详见 <a href="tos.html" style="color:var(--accent)">服务条款与隐私</a>。</div>
   </section>
 
   <div class="disc">
@@ -173,21 +152,6 @@
     所有分析与历史战绩仅供参考，<b>历史表现不代表未来</b>；交易有风险，盈亏与决策由你本人负责。
   </div>
 </div>
-<footer>正EV决策台 · Demo · 分析工具，非投资建议 · 你的数据本地保存，不上传 · <a href="tos.html" style="color:var(--muted)">服务条款与隐私</a></footer>
-<script>
-async function onWait(e){e.preventDefault();
-  const f=e.target,email=f.email.value,want=f.want.value,msg=document.getElementById('wmsg');
-  const configured=!f.action.includes('YOUR_FORM_ID');
-  if(configured){
-    try{await fetch(f.action,{method:'POST',headers:{Accept:'application/json'},body:new FormData(f)});
-      msg.textContent='✅ 已加入等候列表，谢谢！上线后第一时间通知你。';f.reset();}
-    catch(err){msg.style.color='var(--warn)';msg.textContent='提交失败，请稍后重试或用邮件反馈。';}
-  }else{
-    try{const w=JSON.parse(localStorage.getItem('waitlist')||'[]');w.push({email,want,t:Date.now()});localStorage.setItem('waitlist',JSON.stringify(w));}catch(x){}
-    msg.innerHTML='✅ 已记录（演示：本地保存）。<br><span style="color:var(--muted)">上线前把表单 action 换成你的 Formspree / Tally / Google Forms 端点，即可真正收到报名。</span>';f.reset();
-  }
-  return false;}
-function needSetup(name){alert(name+' 群链接待配置：上线前把该按钮的 href 换成你的邀请链接即可。');return false;}
-</script>
+<footer>正EV决策台 · 分析工具，非投资建议 · <a href="tos.html" style="color:var(--muted)">服务条款与隐私</a></footer>
 </body>
 </html>

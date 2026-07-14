@@ -3,6 +3,8 @@ const OKX_TF={"1m":"1m","5m":"5m","15m":"15m","1h":"1H","4h":"4H","1d":"1Dutc"};
 const KRAKEN_TF={"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440};
 const KRAKEN_PAIR={BTCUSDT:"XBTUSDT",ETHUSDT:"ETHUSDT",SOLUSDT:"SOLUSDT"};
 const ALPACA_TF={"1m":"1Min","5m":"5Min","15m":"15Min","1h":"1Hour","4h":"4Hour","1d":"1Day"};
+const YAHOO_TICKER={NDX:"^NDX",XAUUSD:"GC=F",WTI:"CL=F"};
+const YAHOO_TF={"1m":["1m","5d"],"5m":["5m","1mo"],"15m":["15m","1mo"],"1h":["60m","3mo"],"4h":["60m","3mo"],"1d":["1d","2y"]};
 
 const cleanSymbol=s=>String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
 const okxSpot=s=>s.replace(/USDT$/,"-USDT");
@@ -52,6 +54,22 @@ export function parseKrakenCandles(rows,timeframe,nowSec=Math.floor(Date.now()/1
     .filter(r=>r.every(Number.isFinite));
 }
 
+export function aggregateSessionCandles(rows,size=4,offsetSec=0){
+  const out=[];let day="",index=0,key="",bar=null;
+  const flush=()=>{if(bar)out.push(bar);bar=null;};
+  for(const row of rows){const localDay=new Date((row[0]+offsetSec)*1000).toISOString().slice(0,10);if(localDay!==day){flush();day=localDay;index=0;key="";}
+    const nextKey=day+"|"+Math.floor(index/size);if(nextKey!==key){flush();key=nextKey;bar=[...row];}else{bar[2]=Math.max(bar[2],row[2]);bar[3]=Math.min(bar[3],row[3]);bar[4]=row[4];bar[5]+=row[5];}index++;}
+  flush();return out;
+}
+
+export function parseYahooCandles(payload,timeframe,nowSec=Math.floor(Date.now()/1000)){
+  const result=payload?.chart?.result?.[0],timestamps=result?.timestamp,quote=result?.indicators?.quote?.[0];
+  if(!Array.isArray(timestamps)||!quote)return[];
+  const sourceSec=timeframe==="1d"?86400:(timeframe==="4h"||timeframe==="1h")?3600:TF_SECONDS[timeframe],isIndex=result?.meta?.instrumentType==="INDEX",rows=[];
+  for(let i=0;i<timestamps.length;i++){const close=finite(quote.close?.[i]),ts=finite(timestamps[i]);if(close==null||ts==null||ts+sourceSec>nowSec)continue;const open=finite(quote.open?.[i])??close,high=finite(quote.high?.[i])??close,low=finite(quote.low?.[i])??close,volume=isIndex?0:finite(quote.volume?.[i])??0;rows.push([ts,open,high,low,close,volume]);}
+  return timeframe==="4h"?aggregateSessionCandles(rows,4,finite(result?.meta?.gmtoffset)??0):rows;
+}
+
 async function binanceCandles(symbol,timeframe,limit,fetchImpl){
   const path=`/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(timeframe)}&limit=${limit}`;
   return firstOk([
@@ -78,13 +96,18 @@ async function alpacaCandles(symbol,timeframe,limit,env,fetchImpl){
   return{source:`Alpaca ${env.ALPACA_FEED||"IEX"}`,candles:rows.slice(-limit)};
 }
 
+async function yahooCandles(symbol,timeframe,limit,fetchImpl){
+  const ticker=YAHOO_TICKER[symbol]||symbol,[interval,range]=YAHOO_TF[timeframe],url=`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=${range}&interval=${interval}`,payload=await fetchJson(url,14000,{},fetchImpl),candles=parseYahooCandles(payload,timeframe);
+  return{source:"Yahoo Finance delayed",candles:candles.slice(-limit)};
+}
+
 export async function fetchCandles(symbol,timeframe,{limit=260,env={},fetchImpl=fetch}={}){
   const scope=validateScope(symbol,timeframe),crypto=scope.symbol.endsWith("USDT");
   const result=crypto?await firstOk([
     ()=>binanceCandles(scope.symbol,scope.timeframe,limit,fetchImpl),
     ()=>okxCandles(scope.symbol,scope.timeframe,limit,fetchImpl),
     ()=>krakenCandles(scope.symbol,scope.timeframe,limit,fetchImpl)
-  ]):await alpacaCandles(scope.symbol,scope.timeframe,limit,env,fetchImpl);
+  ]):await firstOk([()=>alpacaCandles(scope.symbol,scope.timeframe,limit,env,fetchImpl),()=>yahooCandles(scope.symbol,scope.timeframe,limit,fetchImpl)]);
   if(!result.candles||result.candles.length<80)throw new Error(`insufficient closed candles for ${scope.symbol} ${scope.timeframe}`);
   return{...result,symbol:scope.symbol,timeframe:scope.timeframe,fetchedAt:Date.now(),closedThrough:result.candles.at(-1)[0]};
 }

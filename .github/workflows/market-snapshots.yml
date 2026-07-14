@@ -1,0 +1,36 @@
+name: Delayed Market Snapshots
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: delayed-market-snapshots
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build closed-candle snapshots
+        run: node tools/update_market_snapshots.mjs /tmp/ev-desk-market
+      - name: Publish snapshot branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan market-data
+          git rm -rf . || true
+          mkdir -p market
+          cp /tmp/ev-desk-market/*.json market/
+          touch .nojekyll
+          git add .nojekyll market
+          git commit -m "Update delayed market snapshots"
+          git push --force origin HEAD:market-data

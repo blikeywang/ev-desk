@@ -4,9 +4,9 @@ Cloudflare Worker + D1 implementation for a continuously running, publicly audit
 
 ## What it adds
 
-- Unified closed-candle market adapter: Binance, Binance Data API, OKX and Kraken
+- Unified closed-candle market adapter: Binance, Binance Data API, OKX, Kraken, Alpaca and a delayed Yahoo chart fallback
 - Binance/OKX derivatives context: funding, mark price, OI and 24-hour changes
-- Optional FRED macro context and Alpaca US-equity bars
+- Optional FRED macro context and credentialed Alpaca US-equity bars; US Tech 100 (`NDX` → `^NDX`) and other non-crypto symbols can fall back to delayed bars
 - Scheduled market scans every five minutes
 - Deterministic expert signals from closed candles only
 - Versioned snapshots for all expert views, including neutral/watch decisions
@@ -40,7 +40,7 @@ window.EV_DESK_CONFIG = {
 };
 ```
 
-Until that URL is configured, the static app continues to use its browser-local forward arena.
+Until that URL is configured, the static app uses browser market sources and the published historical/training evidence.
 
 ## Public endpoints
 

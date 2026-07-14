@@ -56,6 +56,16 @@ test("macro direction requires at least two independent inputs",()=>{
   assert.ok(macro.reason.includes("广义美元"));
 });
 
+test("volume-dependent methods abstain when an index feed has no volume",()=>{
+  const result=analyzeExperts(candles().map(row=>[...row.slice(0,5),0]));
+  for(const id of ["wyckoff","volume_profile","avwap"]){
+    const expert=result.find(x=>x.id===id);
+    assert.equal(expert.direction,null);
+    assert.equal(expert.confidence,0);
+    assert.match(expert.reason,/没有可用成交量/);
+  }
+});
+
 test("external directions can use the same audited plan builder",()=>{
   const plan=buildPlan("long",candles());
   assert.ok(plan);
