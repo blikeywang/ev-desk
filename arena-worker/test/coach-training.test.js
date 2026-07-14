@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { aggregatePrior, chooseConsensusCandidate, scopePrior } from "../scripts/build-coach-training.mjs";
+import { aggregatePrior, chooseConsensusCandidate, chooseCounterExperiment, chooseExecutionRemedy, scopePrior } from "../scripts/build-coach-training.mjs";
 
 
 test("scope prior is neutral for small samples", () => {
@@ -46,6 +46,39 @@ test("consensus candidate selection never uses final holdout performance", () =>
 });
 
 
+test("counter experiment selection uses development and validation only", () => {
+  const sourceDevelopment = { scopes: 8, n: 1200, scope_weighted_ev: -0.20, positive_scope_pct: 10 };
+  const sourceValidation = { scopes: 8, n: 600, scope_weighted_ev: -0.12, positive_scope_pct: 20 };
+  const counterDevelopment = { scopes: 8, n: 1000, scope_weighted_ev: 0.08, positive_scope_pct: 75 };
+  const counterValidation = { scopes: 8, n: 500, scope_weighted_ev: 0.05, positive_scope_pct: 62.5 };
+  const selected = chooseCounterExperiment(sourceDevelopment, sourceValidation, counterDevelopment, counterValidation);
+  assert.equal(selected.selected_without_holdout, true);
+  assert.equal(chooseCounterExperiment.length, 4);
+  const rejected = chooseCounterExperiment(sourceDevelopment, sourceValidation, counterDevelopment, { ...counterValidation, positive_scope_pct: 50 });
+  assert.equal(rejected.selected_without_holdout, false);
+});
+
+
+test("cost-aware execution remedy selection ignores final holdout", () => {
+  const base = { scopes: 8, n: 500, positive_scope_pct: 62.5 };
+  const selected = chooseExecutionRemedy([
+    {
+      id: "stable-before-holdout",
+      development: { ...base, scope_weighted_ev: 0.12 },
+      validation: { ...base, scope_weighted_ev: 0.08 },
+      holdout: { ...base, scope_weighted_ev: -9 },
+    },
+    {
+      id: "holdout-winner",
+      development: { ...base, scope_weighted_ev: 0.04 },
+      validation: { ...base, scope_weighted_ev: 0.03 },
+      holdout: { ...base, scope_weighted_ev: 9 },
+    },
+  ]);
+  assert.equal(selected.id, "stable-before-holdout");
+});
+
+
 test("published plan gate remains a narrow veto-only guardrail", async () => {
   const payload = JSON.parse(await readFile(new URL("../../data/plan-gate-model.json", import.meta.url), "utf8"));
   assert.equal(payload.status, "accepted_limited");
@@ -58,9 +91,25 @@ test("published plan gate remains a narrow veto-only guardrail", async () => {
 
 test("published coach evidence includes exact recent holdout settlements", async () => {
   const payload = JSON.parse(await readFile(new URL("../../data/coach-training.json", import.meta.url), "utf8"));
+  assert.equal(payload.schema, "ev_desk_coach_training_v2");
   const completed = Object.values(payload.experts).filter((expert) => expert.aggregate_holdout.n > 0);
   assert.ok(completed.length >= 14);
   for (const expert of completed) {
+    assert.ok(Number.isFinite(expert.aggregate_holdout.scope_weighted_gross_ev));
+    assert.ok(Number.isFinite(expert.aggregate_holdout.scope_weighted_cost_r));
+    assert.equal(typeof expert.counter_research.selection.selected_without_holdout, "boolean");
+    assert.ok(expert.counter_research.development.n > 0);
+    assert.ok(expert.counter_research.validation.n > 0);
+    assert.ok(expert.counter_research.holdout.n > 0);
+    assert.equal(expert.execution_research.candidate_count, 36);
+    assert.equal(typeof expert.execution_research.selection.selected_without_holdout, "boolean");
+    assert.ok(expert.execution_research.best_candidate_without_holdout);
+    assert.ok(expert.execution_research.development.n > 0);
+    assert.ok(expert.execution_research.validation.n > 0);
+    assert.ok(expert.execution_research.holdout.n > 0);
+    assert.ok(expert.execution_research.top_candidates_without_holdout.every((candidate) => !("holdout" in candidate)));
+    if (!expert.counter_research.selection.selected_without_holdout) assert.equal(expert.counter_research.status, "not_selected");
+    if (!expert.execution_research.selection.selected_without_holdout) assert.equal(expert.execution_research.status, "not_selected");
     const populated = Object.values(expert.scopes).map((scope) => scope.holdout).filter((scope) => scope.n > 0);
     assert.ok(populated.length > 0);
     for (const scope of populated) {

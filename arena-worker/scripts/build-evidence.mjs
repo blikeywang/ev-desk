@@ -2,7 +2,7 @@ import {createHash} from "node:crypto";
 import {mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {ENGINE_VERSION,EXPERTS,analyzeExperts,intervalSeconds} from "../src/engine.js";
+import {ENGINE_VERSION,EXPERTS,analyzeExperts,buildPlan,intervalSeconds} from "../src/engine.js";
 
 const HERE=path.dirname(fileURLToPath(import.meta.url));
 const ROOT=path.resolve(HERE,"../..");
@@ -59,7 +59,7 @@ export async function downloadFunding(symbol,startMs,endMs){
 
 function settle(state,bar,grossR,reason,exit){
   const risk=Math.abs(state.entry-state.stop)||1,costR=state.entry*.001/risk;
-  return{expert_id:state.expert_id,symbol:state.symbol,timeframe:state.timeframe,direction:state.direction,regime:state.regime,signal_bar_ts:state.signal_bar_ts,opened_bar_ts:state.entry_bar_ts||bar[0],closed_bar_ts:bar[0],entry:state.entry,exit,stop:state.stop,target:state.target,gross_r:grossR,cost_r:costR,net_r:grossR-costR,close_reason:reason,model_version:state.model_version};
+  return{expert_id:state.expert_id,symbol:state.symbol,timeframe:state.timeframe,direction:state.direction,source_direction:state.source_direction,strategy_variant:state.strategy_variant,regime:state.regime,signal_bar_ts:state.signal_bar_ts,opened_bar_ts:state.entry_bar_ts||bar[0],closed_bar_ts:bar[0],entry:state.entry,exit,stop:state.stop,target:state.target,rr:state.rr,gross_r:grossR,cost_r:costR,net_r:grossR-costR,close_reason:reason,model_version:state.model_version};
 }
 
 function advance(state,bar){
@@ -78,20 +78,34 @@ function advance(state,bar){
   return{state:s,trade:null};
 }
 
-export function simulateScope(candles,fundingRows=[],scope={symbol:"TESTUSDT",timeframe:"1h"}){
-  const states={},trades=[],funding=[...fundingRows].sort((a,b)=>a[0]-b[0]);let fundingIndex=-1,currentFunding=null;
+export function oppositeDirection(direction){return direction==="long"?"short":direction==="short"?"long":null;}
+
+export function simulateScopeVariants(candles,fundingRows=[],scope={symbol:"TESTUSDT",timeframe:"1h"},options={}){
+  const includeStandard=options.includeStandard!==false,includeCounter=options.includeCounter===true,states={standard:{},counter:{}},trades={standard:[],counter:[]},funding=[...fundingRows].sort((a,b)=>a[0]-b[0]);let fundingIndex=-1,currentFunding=null;
   for(let i=80;i<candles.length;i++){
     const bar=candles[i];while(fundingIndex+1<funding.length&&funding[fundingIndex+1][0]<=bar[0])currentFunding=funding[++fundingIndex][1];
-    for(const id of Object.keys(states)){
-      const result=advance(states[id],bar);if(result.trade)trades.push(result.trade);if(result.state)states[id]=result.state;else delete states[id];
+    for(const variant of ["standard","counter"]){
+      for(const id of Object.keys(states[variant])){
+        const result=advance(states[variant][id],bar);if(result.trade)trades[variant].push(result.trade);if(result.state)states[variant][id]=result.state;else delete states[variant][id];
+      }
     }
     const window=candles.slice(Math.max(0,i-259),i+1),analysis=analyzeExperts(window,{fundingRate:currentFunding});
+    const counterPlans={};
     for(const x of analysis){
-      if(states[x.id]||!x.direction||!x.plan||x.plan.rr<1)continue;
-      states[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction:x.direction,regime:x.regime,signal_bar_ts:bar[0],entry:x.plan.entry,stop:x.plan.stop,target:x.plan.target,rr:x.plan.rr,model_version:x.version,status:"pending",age:0,held:0};
+      if(!x.direction||!x.plan||x.plan.rr<1)continue;
+      if(includeStandard&&!states.standard[x.id])states.standard[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction:x.direction,regime:x.regime,signal_bar_ts:bar[0],entry:x.plan.entry,stop:x.plan.stop,target:x.plan.target,rr:x.plan.rr,model_version:x.version,status:"pending",age:0,held:0};
+      if(!includeCounter||states.counter[x.id])continue;
+      const direction=oppositeDirection(x.direction);if(!direction)continue;
+      if(counterPlans[direction]===undefined)counterPlans[direction]=buildPlan(direction,window);
+      const plan=counterPlans[direction];if(!plan||plan.rr<1)continue;
+      states.counter[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction,source_direction:x.direction,strategy_variant:"counter_structural_v1",regime:x.regime,signal_bar_ts:bar[0],entry:plan.entry,stop:plan.stop,target:plan.target,rr:plan.rr,model_version:`counter-structural-v1:${x.version}`,status:"pending",age:0,held:0};
     }
   }
   return trades;
+}
+
+export function simulateScope(candles,fundingRows=[],scope={symbol:"TESTUSDT",timeframe:"1h"}){
+  return simulateScopeVariants(candles,fundingRows,scope,{includeStandard:true,includeCounter:false}).standard;
 }
 
 function wilson(wins,n,z=1.96){
@@ -101,7 +115,7 @@ function downsample(curve,max=80){
   if(curve.length<=max)return curve.map(x=>round(x,3));const out=[];for(let i=0;i<max;i++)out.push(round(curve[Math.min(curve.length-1,Math.floor(i*(curve.length-1)/(max-1)))],3));return out;
 }
 export function summarizeTrades(rows,options={}){
-  const R=rows.map(x=>+x.net_r),n=R.length,wins=R.filter(x=>x>0).length,gp=R.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=Math.abs(R.filter(x=>x<=0).reduce((a,b)=>a+b,0));let eq=0,peak=0,mdd=0;const curve=[];
+  const R=rows.map(x=>+x.net_r),gross=rows.map(x=>+x.gross_r).filter(Number.isFinite),costs=rows.map(x=>+x.cost_r).filter(Number.isFinite),n=R.length,wins=R.filter(x=>x>0).length,gp=R.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=Math.abs(R.filter(x=>x<=0).reduce((a,b)=>a+b,0));let eq=0,peak=0,mdd=0;const curve=[];
   R.forEach(r=>{eq+=r;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);curve.push(eq);});
   const ev=mean(R),variance=n>1?R.reduce((s,x)=>s+(x-ev)**2,0)/(n-1):0,se=Math.sqrt(variance/Math.max(1,n)),winCi=wilson(wins,n);
   const cutoff=rows.length?rows.at(-1).closed_bar_ts-90*86400:0,recent=R.filter((_,i)=>rows[i].closed_bar_ts>=cutoff),prior=R.filter((_,i)=>rows[i].closed_bar_ts<cutoff&&rows[i].closed_bar_ts>=cutoff-90*86400);
@@ -113,7 +127,7 @@ export function summarizeTrades(rows,options={}){
     close_reason:row.close_reason,
     regime:row.regime,
   }));
-  const summary={n,win:round(n?wins/n*100:0,1),win_ci95:winCi.map(x=>round(x*100,1)),ev:round(ev,3),ev_ci95:[round(ev-1.96*se,3),round(ev+1.96*se,3)],pf:round(gl?gp/gl:(gp?9.99:0),2),mdd:round(mdd,2),total_r:round(eq,2),recent_90d_ev:recent.length?round(mean(recent),3):null,prior_90d_ev:prior.length?round(mean(prior),3):null,drift_90d:recent.length&&prior.length?round(mean(recent)-mean(prior),3):null,curve:downsample(curve),first_trade:rows[0]?.opened_bar_ts||null,last_trade:rows.at(-1)?.closed_bar_ts||null,regimes:Object.fromEntries(Object.entries(byRegime).map(([k,v])=>[k,{n:v.length,ev:round(mean(v.map(x=>x.net_r)),3)}]))};
+  const summary={n,win:round(n?wins/n*100:0,1),win_ci95:winCi.map(x=>round(x*100,1)),ev:round(ev,3),gross_ev:gross.length?round(mean(gross),3):null,avg_cost_r:costs.length?round(mean(costs),3):null,ev_ci95:[round(ev-1.96*se,3),round(ev+1.96*se,3)],pf:round(gl?gp/gl:(gp?9.99:0),2),mdd:round(mdd,2),total_r:round(eq,2),recent_90d_ev:recent.length?round(mean(recent),3):null,prior_90d_ev:prior.length?round(mean(prior),3):null,drift_90d:recent.length&&prior.length?round(mean(recent)-mean(prior),3):null,curve:downsample(curve),first_trade:rows[0]?.opened_bar_ts||null,last_trade:rows.at(-1)?.closed_bar_ts||null,regimes:Object.fromEntries(Object.entries(byRegime).map(([k,v])=>[k,{n:v.length,ev:round(mean(v.map(x=>x.net_r)),3)}]))};
   if(options.includeRecent)summary.recent_trades=recentTrades;
   return summary;
 }

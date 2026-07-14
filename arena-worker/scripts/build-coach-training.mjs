@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { analyzeExperts, buildPlan, ENGINE_VERSION, EXPERTS } from "../src/engine.js";
-import { simulateScope, summarizeTrades } from "./build-evidence.mjs";
+import { simulateScopeVariants, summarizeTrades } from "./build-evidence.mjs";
 
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -44,11 +44,18 @@ export function scopePrior(summary) {
 export function aggregatePrior(scopeSummaries) {
   const eligible = scopeSummaries.filter((item) => item && item.n >= 20 && Number.isFinite(item.ev));
   if (!eligible.length) {
-    return { status: "pending", scopes: 0, n: 0, scope_weighted_ev: null, positive_scope_pct: null, prior_multiplier: 1 };
+    return { status: "pending", scopes: 0, n: 0, scope_weighted_ev: null, scope_weighted_gross_ev: null, scope_weighted_cost_r: null, positive_scope_pct: null, prior_multiplier: 1 };
   }
   const weighted = eligible.map((item) => ({ item, weight: Math.sqrt(Math.min(item.n, 400)) }));
   const weight = weighted.reduce((sum, row) => sum + row.weight, 0);
   const ev = weighted.reduce((sum, row) => sum + row.item.ev * row.weight, 0) / weight;
+  const weightedMetric = (key) => {
+    const rows = weighted.filter((row) => Number.isFinite(row.item[key]));
+    const total = rows.reduce((sum, row) => sum + row.weight, 0);
+    return total ? rows.reduce((sum, row) => sum + row.item[key] * row.weight, 0) / total : null;
+  };
+  const grossEv = weightedMetric("gross_ev");
+  const costR = weightedMetric("avg_cost_r");
   const n = eligible.reduce((sum, item) => sum + item.n, 0);
   const positive = eligible.filter((item) => item.ev > 0).length / eligible.length;
   const reliability = (n / (n + 300)) * Math.min(1, eligible.length / 6);
@@ -59,9 +66,118 @@ export function aggregatePrior(scopeSummaries) {
     scopes: eligible.length,
     n,
     scope_weighted_ev: round(ev, 3),
+    scope_weighted_gross_ev: round(grossEv, 3),
+    scope_weighted_cost_r: round(costR, 3),
     positive_scope_pct: round(positive * 100, 1),
     prior_multiplier: round(multiplier, 3),
   };
+}
+
+
+export const COUNTER_SELECTION_CRITERIA = Object.freeze({
+  min_scopes: 4,
+  min_trades_per_split: 200,
+  max_source_ev: -0.05,
+  min_counter_ev: 0.03,
+  min_positive_scope_pct: 55,
+});
+
+
+export const EXECUTION_REMEDY_CONFIGS = [];
+for (const maxCostR of [0.12, 0.18, 0.25, 0.35]) {
+  for (const minRr of [1.20, 1.50, 2.00]) {
+    for (const regimePolicy of ["all", "not_countertrend", "aligned"]) {
+      EXECUTION_REMEDY_CONFIGS.push({
+        id: `cost${String(maxCostR).replace(".", "")}-rr${String(minRr).replace(".", "")}-${regimePolicy}`,
+        max_cost_r: maxCostR,
+        min_rr: minRr,
+        regime_policy: regimePolicy,
+      });
+    }
+  }
+}
+
+
+function compactTradeSummary(rows) {
+  const summary = summarizeTrades(rows);
+  return Object.fromEntries(["n", "win", "ev", "gross_ev", "avg_cost_r", "pf", "mdd", "total_r"]
+    .map((key) => [key, summary[key]]));
+}
+
+
+function executionRemedyPass(row, config) {
+  if (!(Number.isFinite(row.cost_r) && row.cost_r <= config.max_cost_r)) return false;
+  if (!(Number.isFinite(row.rr) && row.rr >= config.min_rr)) return false;
+  return config.regime_policy === "all" || regimePass(config.regime_policy, row.direction, row.regime);
+}
+
+
+function executionRemedyScore(report) {
+  const development = report.development;
+  const validation = report.validation;
+  const criteria = COUNTER_SELECTION_CRITERIA;
+  if (!development || !validation || development.scopes < criteria.min_scopes || validation.scopes < criteria.min_scopes
+    || development.n < criteria.min_trades_per_split || validation.n < criteria.min_trades_per_split) return -Infinity;
+  const stability = Math.min(development.scope_weighted_ev, validation.scope_weighted_ev);
+  const average = (development.scope_weighted_ev + validation.scope_weighted_ev) / 2;
+  const breadth = Math.min(development.positive_scope_pct, validation.positive_scope_pct);
+  return stability + average * 0.20 + (breadth - 50) * 0.001;
+}
+
+
+export function chooseExecutionRemedy(reports) {
+  return [...reports].sort((left, right) => executionRemedyScore(right) - executionRemedyScore(left))[0] || null;
+}
+
+
+function executionRemedySelection(report) {
+  if (!report) return { selected_without_holdout: false, reasons: ["没有候选策略"] };
+  const criteria = COUNTER_SELECTION_CRITERIA;
+  const reasons = [];
+  for (const [label, summary] of [["开发集", report.development], ["验证集", report.validation]]) {
+    if (!summary || summary.scopes < criteria.min_scopes || summary.n < criteria.min_trades_per_split) reasons.push(`${label}样本不足`);
+    else {
+      if (!(summary.scope_weighted_ev >= criteria.min_counter_ev)) reasons.push(`${label}期望未达门槛`);
+      if (!(summary.positive_scope_pct >= criteria.min_positive_scope_pct)) reasons.push(`${label}正向范围不足`);
+    }
+  }
+  return {
+    selected_without_holdout: reasons.length === 0,
+    selection_score: round(executionRemedyScore(report), 4),
+    reasons,
+  };
+}
+
+
+export function chooseCounterExperiment(sourceDevelopment, sourceValidation, counterDevelopment, counterValidation) {
+  const criteria = COUNTER_SELECTION_CRITERIA;
+  const reasons = [];
+  for (const [label, summary] of [["原策略开发集", sourceDevelopment], ["原策略验证集", sourceValidation]]) {
+    if (!summary || summary.scopes < criteria.min_scopes || summary.n < criteria.min_trades_per_split) reasons.push(`${label}样本不足`);
+    else if (!(summary.scope_weighted_ev <= criteria.max_source_ev)) reasons.push(`${label}并非稳定负期望`);
+  }
+  for (const [label, summary] of [["反策略开发集", counterDevelopment], ["反策略验证集", counterValidation]]) {
+    if (!summary || summary.scopes < criteria.min_scopes || summary.n < criteria.min_trades_per_split) reasons.push(`${label}样本不足`);
+    else {
+      if (!(summary.scope_weighted_ev >= criteria.min_counter_ev)) reasons.push(`${label}期望未达门槛`);
+      if (!(summary.positive_scope_pct >= criteria.min_positive_scope_pct)) reasons.push(`${label}正向范围不足`);
+    }
+  }
+  return {
+    selected_without_holdout: reasons.length === 0,
+    criteria,
+    reasons,
+  };
+}
+
+
+function counterHoldoutStatus(selection, holdout) {
+  if (!selection.selected_without_holdout) return "not_selected";
+  if (!holdout || holdout.scopes < COUNTER_SELECTION_CRITERIA.min_scopes || holdout.n < COUNTER_SELECTION_CRITERIA.min_trades_per_split) return "holdout_insufficient";
+  return holdout.scope_weighted_ev >= COUNTER_SELECTION_CRITERIA.min_counter_ev
+    && holdout.positive_scope_pct >= COUNTER_SELECTION_CRITERIA.min_positive_scope_pct
+    ? "holdout_supported"
+    : "holdout_failed";
 }
 
 
@@ -292,14 +408,18 @@ export async function buildCoachTraining(manifestPath) {
     school: expert.school,
     version: expert.version,
     scopes: {},
+    counter_scopes: {},
   }]));
   const scopeRecords = [];
   const globalConsensus = new Map(CONSENSUS_CONFIGS.map((config) => [config.id, []]));
+  const executionResearch = new Map(methodExperts.map((expert) => [expert.id, new Map(EXECUTION_REMEDY_CONFIGS.map((config) => [config.id, []]))]));
 
   for (const scope of manifest.scopes) {
     process.stdout.write(`Calibrating ${scope.symbol} ${scope.timeframe} (${scope.bars} bars)... `);
     const payload = await readCanonical(manifestPath, scope.file);
-    const trades = simulateScope(payload.bars, [], { symbol: scope.symbol, timeframe: scope.timeframe });
+    const variants = simulateScopeVariants(payload.bars, [], { symbol: scope.symbol, timeframe: scope.timeframe }, { includeStandard: true, includeCounter: true });
+    const trades = variants.standard;
+    const counterTrades = variants.counter;
     const consensusReports = simulateConsensusCandidates(
       payload.bars,
       { symbol: scope.symbol, timeframe: scope.timeframe },
@@ -308,13 +428,21 @@ export async function buildCoachTraining(manifestPath) {
     for (const report of consensusReports) globalConsensus.get(report.config.id).push(report);
     const selectedConsensus = chooseConsensusCandidate(consensusReports);
     const grouped = Object.fromEntries(methodExperts.map((expert) => [expert.id, []]));
+    const counterGrouped = Object.fromEntries(methodExperts.map((expert) => [expert.id, []]));
     for (const trade of trades) {
       if (grouped[trade.expert_id]) grouped[trade.expert_id].push(trade);
     }
+    for (const trade of counterTrades) {
+      if (counterGrouped[trade.expert_id]) counterGrouped[trade.expert_id].push(trade);
+    }
     const splitCounts = { development: 0, validation: 0, holdout: 0 };
+    const counterSplitCounts = { development: 0, validation: 0, holdout: 0 };
     for (const expert of methodExperts) {
       const rows = grouped[expert.id];
       const split = splitRows(rows, payload.split);
+      const counterRows = counterGrouped[expert.id];
+      const counterSplit = splitRows(counterRows, payload.split);
+      const scopeKey = `${scope.symbol}|${scope.timeframe}`;
       const record = {
         development: summarizeTrades(split.development),
         validation: summarizeTrades(split.validation),
@@ -322,10 +450,27 @@ export async function buildCoachTraining(manifestPath) {
         all: summarizeTrades(rows),
       };
       record.holdout.prior_multiplier = scopePrior(record.holdout);
-      experts[expert.id].scopes[`${scope.symbol}|${scope.timeframe}`] = record;
+      experts[expert.id].scopes[scopeKey] = record;
+      experts[expert.id].counter_scopes[scopeKey] = {
+        development: compactTradeSummary(counterSplit.development),
+        validation: compactTradeSummary(counterSplit.validation),
+        holdout: compactTradeSummary(counterSplit.holdout),
+        all: compactTradeSummary(counterRows),
+      };
+      for (const config of EXECUTION_REMEDY_CONFIGS) {
+        executionResearch.get(expert.id).get(config.id).push({
+          scope: scopeKey,
+          development: compactTradeSummary(split.development.filter((row) => executionRemedyPass(row, config))),
+          validation: compactTradeSummary(split.validation.filter((row) => executionRemedyPass(row, config))),
+          holdout: compactTradeSummary(split.holdout.filter((row) => executionRemedyPass(row, config))),
+        });
+      }
       splitCounts.development += split.development.length;
       splitCounts.validation += split.validation.length;
       splitCounts.holdout += split.holdout.length;
+      counterSplitCounts.development += counterSplit.development.length;
+      counterSplitCounts.validation += counterSplit.validation.length;
+      counterSplitCounts.holdout += counterSplit.holdout.length;
     }
     scopeRecords.push({
       symbol: scope.symbol,
@@ -335,7 +480,9 @@ export async function buildCoachTraining(manifestPath) {
       through: scope.through,
       split: payload.split,
       trades: trades.length,
+      counter_trades: counterTrades.length,
       split_trades_all_methods: splitCounts,
+      counter_split_trades_all_methods: counterSplitCounts,
       consensus_model: selectedConsensus ? {
         selected_without_holdout: selectedConsensus.config,
         selection_score: selectedConsensus.selection_score,
@@ -357,8 +504,63 @@ export async function buildCoachTraining(manifestPath) {
   }
 
   for (const expert of methodExperts) {
-    const summaries = Object.values(experts[expert.id].scopes).map((scope) => scope.holdout);
-    experts[expert.id].aggregate_holdout = aggregatePrior(summaries);
+    const standardScopes = Object.values(experts[expert.id].scopes);
+    const counterScopes = Object.values(experts[expert.id].counter_scopes);
+    experts[expert.id].aggregate_holdout = aggregatePrior(standardScopes.map((scope) => scope.holdout));
+    const sourceDevelopment = aggregatePrior(standardScopes.map((scope) => scope.development));
+    const sourceValidation = aggregatePrior(standardScopes.map((scope) => scope.validation));
+    const counterDevelopment = aggregatePrior(counterScopes.map((scope) => scope.development));
+    const counterValidation = aggregatePrior(counterScopes.map((scope) => scope.validation));
+    const counterHoldout = aggregatePrior(counterScopes.map((scope) => scope.holdout));
+    const selection = chooseCounterExperiment(sourceDevelopment, sourceValidation, counterDevelopment, counterValidation);
+    experts[expert.id].counter_research = {
+      variant: "counter_structural_v1",
+      definition: "Use the original lens only as a contrarian direction trigger, then build a fresh opposite-direction structural entry, stop, and target.",
+      selection,
+      source_development: sourceDevelopment,
+      source_validation: sourceValidation,
+      development: counterDevelopment,
+      validation: counterValidation,
+      holdout: counterHoldout,
+      status: counterHoldoutStatus(selection, counterHoldout),
+    };
+    const executionCandidates = EXECUTION_REMEDY_CONFIGS.map((config) => {
+      const scopeReports = executionResearch.get(expert.id).get(config.id);
+      return {
+        config,
+        development: aggregatePrior(scopeReports.map((report) => report.development)),
+        validation: aggregatePrior(scopeReports.map((report) => report.validation)),
+        holdout: aggregatePrior(scopeReports.map((report) => report.holdout)),
+        scope_reports: scopeReports,
+      };
+    });
+    const bestExecution = chooseExecutionRemedy(executionCandidates);
+    const executionSelection = executionRemedySelection(bestExecution);
+    experts[expert.id].execution_research = bestExecution ? {
+      variant: "cost_aware_abstention_v1",
+      definition: "Keep the original direction, but abstain when round-trip cost consumes too much risk, structural reward is too low, or the configured regime policy rejects the plan.",
+      candidate_count: EXECUTION_REMEDY_CONFIGS.length,
+      best_candidate_without_holdout: bestExecution.config,
+      selection: executionSelection,
+      development: bestExecution.development,
+      validation: bestExecution.validation,
+      holdout: bestExecution.holdout,
+      status: counterHoldoutStatus(executionSelection, bestExecution.holdout),
+      scopes: Object.fromEntries(bestExecution.scope_reports.map((report) => [report.scope, {
+        development: report.development,
+        validation: report.validation,
+        holdout: report.holdout,
+      }])),
+      top_candidates_without_holdout: [...executionCandidates]
+        .sort((left, right) => executionRemedyScore(right) - executionRemedyScore(left))
+        .slice(0, 3)
+        .map((candidate) => ({
+          config: candidate.config,
+          selection_score: round(executionRemedyScore(candidate), 4),
+          development: candidate.development,
+          validation: candidate.validation,
+        })),
+    } : null;
     if (expert.id === "sentiment") {
       experts[expert.id].calibration_boundary = "Supplied OI/positioning metrics are profiled, but funding-rate history was not present in this package; existing official funding evidence remains separate.";
     } else if (expert.id === "macro") {
@@ -369,7 +571,7 @@ export async function buildCoachTraining(manifestPath) {
   }
 
   const body = {
-    schema: "ev_desk_coach_training_v1",
+    schema: "ev_desk_coach_training_v2",
     meta: {
       generated_at: new Date().toISOString(),
       engine_version: ENGINE_VERSION,
@@ -380,6 +582,8 @@ export async function buildCoachTraining(manifestPath) {
         signal_time: "closed bars only; current and earlier bars available",
         execution: "pending 12 bars, maximum hold 30 bars, same-bar stop first, 0.10% round-trip cost",
         calibration: "fixed expert rules are not tuned on holdout; holdout EV only supplies a conservative 0.90x-1.10x prior",
+        counter_research: "Opposite-direction candidates are selected with development and validation only; final holdout is disclosed after selection and never enables a candidate retroactively.",
+        execution_research: "Cost/R, minimum-RR, and regime abstention candidates are selected with development and validation only; holdout is disclosed after selection and cannot relax activation criteria.",
         growth_boundary: "historical calibration is not expert growth; only forward-sealed arena results may update growth",
         paul_boundary: "Paul Wei is a separate behavior model supervised by action labels; method-lens PnL is not substituted for his record",
       },

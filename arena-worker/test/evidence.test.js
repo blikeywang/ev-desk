@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {simulateScope,summarizeTrades} from "../scripts/build-evidence.mjs";
+import {oppositeDirection,simulateScope,simulateScopeVariants,summarizeTrades} from "../scripts/build-evidence.mjs";
 
 function candles(n=420){
   const out=[];for(let i=0;i<n;i++){const wave=Math.sin(i/18)*28,trend=i*.15,base=1000+wave+trend,o=base-Math.sin(i)*3,c=base+Math.cos(i/3)*4,h=Math.max(o,c)+9,l=Math.min(o,c)-9,v=1000+(i%23===0?1500:0);out.push([1700000000+i*3600,o,h,l,c,v]);}return out;
@@ -11,6 +11,15 @@ test("historical simulator emits only future-bar settlements",()=>{
   assert.ok(rows.length>0);
   assert.ok(rows.every(x=>x.opened_bar_ts>x.signal_bar_ts));
   assert.ok(rows.every(x=>Number.isFinite(x.net_r)&&x.cost_r>0));
+});
+
+test("counter simulator rebuilds a real opposite-direction structural plan",()=>{
+  const rows=simulateScopeVariants(candles(),[],{symbol:"TESTUSDT",timeframe:"1h"},{includeStandard:true,includeCounter:true}).counter;
+  assert.ok(rows.length>0);
+  assert.ok(rows.every(row=>row.strategy_variant==="counter_structural_v1"));
+  assert.ok(rows.every(row=>row.direction===oppositeDirection(row.source_direction)));
+  assert.ok(rows.every(row=>row.opened_bar_ts>row.signal_bar_ts));
+  assert.ok(rows.every(row=>row.direction==="long"?row.stop<row.entry&&row.target>row.entry:row.stop>row.entry&&row.target<row.entry));
 });
 
 test("evidence summary exposes uncertainty and drawdown",()=>{
