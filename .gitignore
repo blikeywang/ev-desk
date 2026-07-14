@@ -2,3 +2,4 @@
 enent contract/
 .coach-training-work/
 .playwright-cli/
+__pycache__/

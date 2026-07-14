@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { aggregatePrior, chooseConsensusCandidate, chooseCounterExperiment, chooseExecutionRemedy, scopePrior } from "../scripts/build-coach-training.mjs";
+import { aggregatePrior, assessSpecialization, chooseConsensusCandidate, chooseCounterExperiment, chooseExecutionRemedy, chooseSpecialization, scopePrior } from "../scripts/build-coach-training.mjs";
 
 
 test("scope prior is neutral for small samples", () => {
@@ -79,12 +79,35 @@ test("cost-aware execution remedy selection ignores final holdout", () => {
 });
 
 
+test("specialist role is selected on development before validation or holdout are read", () => {
+  const selected = chooseSpecialization([
+    {
+      id: "development-winner",
+      development: { n: 200, ev: 0.20, ev_ci95: [0.05, 0.35] },
+      validation: { n: 80, ev: -9, total_r: -720 },
+      holdout: { n: 80, ev: -9, total_r: -720 },
+    },
+    {
+      id: "future-winner",
+      development: { n: 200, ev: 0.05, ev_ci95: [-0.05, 0.15] },
+      validation: { n: 80, ev: 9, total_r: 720 },
+      holdout: { n: 80, ev: 9, total_r: 720 },
+    },
+  ]);
+  assert.equal(selected.id, "development-winner");
+  assert.equal(assessSpecialization(selected).status, "validation_failed");
+});
+
+
 test("published plan gate remains a narrow veto-only guardrail", async () => {
   const payload = JSON.parse(await readFile(new URL("../../data/plan-gate-model.json", import.meta.url), "utf8"));
   assert.equal(payload.status, "accepted_limited");
   assert.equal(payload.selection.used_holdout, false);
   assert.equal(payload.deployment.mode, "veto_only");
   assert.deepEqual(payload.deployment.scopes, ["BTCUSDT|1h", "ETHUSDT|4h"]);
+  assert.equal(payload.coach_vote_policy.used_holdout, false);
+  assert.ok(payload.coach_vote_policy.active_coach_ids.length > 0);
+  assert.deepEqual(payload.model.active_vote_features, payload.coach_vote_policy.active_vote_features);
   assert.ok(payload.model.trees.length > 0);
 });
 
@@ -108,6 +131,9 @@ test("published coach evidence includes exact recent holdout settlements", async
     assert.ok(expert.execution_research.validation.n > 0);
     assert.ok(expert.execution_research.holdout.n > 0);
     assert.ok(expert.execution_research.top_candidates_without_holdout.every((candidate) => !("holdout" in candidate)));
+    assert.equal(expert.specialization_research.selection.used_validation, false);
+    assert.equal(expert.specialization_research.selection.used_holdout, false);
+    assert.ok(expert.specialization_research.top_development_candidates.every((candidate) => !("validation" in candidate) && !("holdout" in candidate)));
     if (!expert.counter_research.selection.selected_without_holdout) assert.equal(expert.counter_research.status, "not_selected");
     if (!expert.execution_research.selection.selected_without_holdout) assert.equal(expert.execution_research.status, "not_selected");
     const populated = Object.values(expert.scopes).map((scope) => scope.holdout).filter((scope) => scope.n > 0);

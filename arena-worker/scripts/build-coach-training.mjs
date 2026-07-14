@@ -100,7 +100,7 @@ for (const maxCostR of [0.12, 0.18, 0.25, 0.35]) {
 
 function compactTradeSummary(rows) {
   const summary = summarizeTrades(rows);
-  return Object.fromEntries(["n", "win", "ev", "gross_ev", "avg_cost_r", "pf", "mdd", "total_r"]
+  return Object.fromEntries(["n", "win", "ev", "gross_ev", "avg_cost_r", "ev_ci95", "pf", "mdd", "total_r"]
     .map((key) => [key, summary[key]]));
 }
 
@@ -127,6 +127,55 @@ function executionRemedyScore(report) {
 
 export function chooseExecutionRemedy(reports) {
   return [...reports].sort((left, right) => executionRemedyScore(right) - executionRemedyScore(left))[0] || null;
+}
+
+
+export const SPECIALIZATION_CRITERIA = Object.freeze({
+  min_development_trades: 100,
+  min_validation_trades: 40,
+  min_holdout_trades: 40,
+  min_validation_ev: 0.03,
+  min_holdout_ev: 0.03,
+});
+
+
+function specializationDevelopmentScore(report) {
+  const development = report && report.development;
+  if (!development || development.n < SPECIALIZATION_CRITERIA.min_development_trades || !Number.isFinite(development.ev)) return -Infinity;
+  const ci = development.ev_ci95 || [];
+  const standardError = ci.length === 2 && ci.every(Number.isFinite) ? (ci[1] - ci[0]) / 3.92 : 1 / Math.sqrt(development.n);
+  return development.ev - standardError;
+}
+
+
+export function chooseSpecialization(reports) {
+  return [...reports].sort((left, right) => specializationDevelopmentScore(right) - specializationDevelopmentScore(left))[0] || null;
+}
+
+
+export function assessSpecialization(report) {
+  if (!report || !Number.isFinite(specializationDevelopmentScore(report))) {
+    return { status: "no_candidate", validation_pass: false, holdout_pass: false, reasons: ["开发集没有足够样本"] };
+  }
+  const criteria = SPECIALIZATION_CRITERIA;
+  const validation = report.validation || {};
+  const holdout = report.holdout || {};
+  const validationReasons = [];
+  if (!(validation.n >= criteria.min_validation_trades)) validationReasons.push("验证集样本不足");
+  if (!(validation.ev >= criteria.min_validation_ev)) validationReasons.push("验证集期望未达门槛");
+  if (!(validation.total_r > 0)) validationReasons.push("验证集累计R未转正");
+  const validationPass = validationReasons.length === 0;
+  const holdoutReasons = [];
+  if (!(holdout.n >= criteria.min_holdout_trades)) holdoutReasons.push("最终留出样本不足");
+  if (!(holdout.ev >= criteria.min_holdout_ev)) holdoutReasons.push("最终留出期望未达门槛");
+  if (!(holdout.total_r > 0)) holdoutReasons.push("最终留出累计R未转正");
+  const holdoutPass = holdoutReasons.length === 0;
+  return {
+    status: !validationPass ? "validation_failed" : !holdoutPass ? "holdout_failed" : "historically_supported",
+    validation_pass: validationPass,
+    holdout_pass: holdoutPass,
+    reasons: [...validationReasons, ...(validationPass ? holdoutReasons : [])],
+  };
 }
 
 
@@ -534,6 +583,44 @@ export async function buildCoachTraining(manifestPath) {
         scope_reports: scopeReports,
       };
     });
+    const specializationCandidates = executionCandidates.flatMap((candidate) => candidate.scope_reports.map((scopeReport) => ({
+      scope: scopeReport.scope,
+      config: candidate.config,
+      development: scopeReport.development,
+      validation: scopeReport.validation,
+      holdout: scopeReport.holdout,
+    })));
+    const bestSpecialization = chooseSpecialization(specializationCandidates);
+    const specializationAssessment = assessSpecialization(bestSpecialization);
+    experts[expert.id].specialization_research = bestSpecialization ? {
+      variant: "development_selected_specialist_v1",
+      definition: "Select exactly one market, timeframe, cost ceiling, minimum reward/risk, and regime policy using development only; validation and final holdout may reject it but can never choose a replacement.",
+      candidate_count: specializationCandidates.length,
+      criteria: SPECIALIZATION_CRITERIA,
+      selected_on_development: {
+        scope: bestSpecialization.scope,
+        ...bestSpecialization.config,
+        selection_score: round(specializationDevelopmentScore(bestSpecialization), 4),
+      },
+      selection: {
+        used_validation: false,
+        used_holdout: false,
+      },
+      development: bestSpecialization.development,
+      validation: bestSpecialization.validation,
+      holdout: bestSpecialization.holdout,
+      assessment: specializationAssessment,
+      deployment: specializationAssessment.status === "historically_supported" ? "forward_arena_only" : "disabled",
+      top_development_candidates: [...specializationCandidates]
+        .sort((left, right) => specializationDevelopmentScore(right) - specializationDevelopmentScore(left))
+        .slice(0, 3)
+        .map((candidate) => ({
+          scope: candidate.scope,
+          config: candidate.config,
+          selection_score: round(specializationDevelopmentScore(candidate), 4),
+          development: candidate.development,
+        })),
+    } : null;
     const bestExecution = chooseExecutionRemedy(executionCandidates);
     const executionSelection = executionRemedySelection(bestExecution);
     experts[expert.id].execution_research = bestExecution ? {
@@ -584,6 +671,7 @@ export async function buildCoachTraining(manifestPath) {
         calibration: "fixed expert rules are not tuned on holdout; holdout EV only supplies a conservative 0.90x-1.10x prior",
         counter_research: "Opposite-direction candidates are selected with development and validation only; final holdout is disclosed after selection and never enables a candidate retroactively.",
         execution_research: "Cost/R, minimum-RR, and regime abstention candidates are selected with development and validation only; holdout is disclosed after selection and cannot relax activation criteria.",
+        specialization_research: "A single specialist role is selected from market x timeframe x cost x RR x regime candidates using development only. Validation is a one-shot exam and final holdout is a one-shot audit; neither may select a replacement.",
         growth_boundary: "historical calibration is not expert growth; only forward-sealed arena results may update growth",
         paul_boundary: "Paul Wei is a separate behavior model supervised by action labels; method-lens PnL is not substituted for his record",
       },

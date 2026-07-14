@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Train and audit an interpretable plan-quality gate on chronological splits."""
+"""Train and audit a plan-quality gate on chronological splits."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import math
+import platform
 from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
@@ -133,6 +135,64 @@ def objective(summary):
     return summary["scope_weighted_ev"] - drawdown_penalty + breadth
 
 
+def probabilities_with_vote_policy(model, frame, feature_columns, active_vote_features):
+    values = frame[feature_columns].to_numpy(dtype=float).copy()
+    if active_vote_features is not None:
+        allowed = set(active_vote_features)
+        for index, feature in enumerate(feature_columns):
+            if feature.startswith("vote_") and feature not in allowed:
+                values[:, index] = 0
+    return model.predict_proba(values)[:, 1]
+
+
+def build_vote_policy_candidates(model, feature_columns):
+    ranked = sorted(
+        (
+            (feature, float(importance))
+            for feature, importance in zip(feature_columns, model.feature_importances_)
+            if feature.startswith("vote_")
+        ),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    ranked_features = [feature for feature, _ in ranked]
+
+    def compact_team_label(features):
+        generic = {"vote_edge_relative", "vote_count_for", "vote_count_against"}
+        coach_count = sum(feature not in generic for feature in features)
+        parts = [f"{coach_count} 位计划席"] if coach_count else []
+        if "vote_edge_relative" in features:
+            parts.append("总共识")
+        if "vote_count_for" in features or "vote_count_against" in features:
+            parts.append("票数强弱")
+        return " + ".join(parts) or "精简教练输入"
+
+    top_two = ranked_features[:2]
+    top_five = ranked_features[:5]
+    return [
+        {
+            "id": "full_council",
+            "label": "全体方法镜头",
+            "active_vote_features": None,
+        },
+        {
+            "id": "structure_only",
+            "label": "仅价格结构与执行纪律",
+            "active_vote_features": [],
+        },
+        {
+            "id": "top2_votes",
+            "label": compact_team_label(top_two),
+            "active_vote_features": top_two,
+        },
+        {
+            "id": "top5_votes",
+            "label": compact_team_label(top_five),
+            "active_vote_features": top_five,
+        },
+    ]
+
+
 def probability_metrics(y, probabilities):
     if len(np.unique(y)) < 2:
         return {"roc_auc": None, "brier": None, "base_rate": rounded(y.mean(), 4)}
@@ -194,9 +254,54 @@ def train(frame):
     if best is None:
         raise RuntimeError("No plan gate candidate met the minimum validation coverage")
 
-    holdout_prob = model.predict_proba(holdout_x)[:, 1]
+    vote_policy_reports = []
+    for policy in build_vote_policy_candidates(model, feature_columns):
+        policy_validation_prob = probabilities_with_vote_policy(
+            model, validation, feature_columns, policy["active_vote_features"]
+        )
+        policy_validation = summarize_policy(
+            validation, policy_validation_prob, best["threshold"]
+        )
+        score = objective(policy_validation)
+        vote_policy_reports.append(
+            {
+                **policy,
+                "selection_score": rounded(score, 5) if np.isfinite(score) else None,
+                "validation": policy_validation,
+            }
+        )
+    eligible_vote_policies = [
+        policy for policy in vote_policy_reports if policy["selection_score"] is not None
+    ]
+    selected_vote_policy = max(
+        eligible_vote_policies,
+        key=lambda policy: policy["selection_score"],
+        default=vote_policy_reports[0],
+    )
+    selected_vote_features = selected_vote_policy["active_vote_features"]
+    validation_prob = probabilities_with_vote_policy(
+        model, validation, feature_columns, selected_vote_features
+    )
+    holdout_prob = probabilities_with_vote_policy(
+        model, holdout, feature_columns, selected_vote_features
+    )
     validation_summary = summarize_policy(validation, validation_prob, best["threshold"])
     holdout_summary = summarize_policy(holdout, holdout_prob, best["threshold"])
+    for policy in vote_policy_reports:
+        policy_holdout_prob = probabilities_with_vote_policy(
+            model, holdout, feature_columns, policy["active_vote_features"]
+        )
+        policy["holdout"] = summarize_policy(
+            holdout, policy_holdout_prob, best["threshold"]
+        )
+    all_vote_features = [feature for feature in feature_columns if feature.startswith("vote_")]
+    active_vote_features = all_vote_features if selected_vote_features is None else selected_vote_features
+    active_coach_ids = [
+        feature.removeprefix("vote_")
+        for feature in active_vote_features
+        if feature.removeprefix("vote_")
+        not in {"edge_relative", "count_for", "count_against"}
+    ]
     deployment_scopes = []
     for scope, validation_scope in validation_summary["scopes"].items():
         holdout_scope = holdout_summary["scopes"].get(scope)
@@ -220,9 +325,15 @@ def train(frame):
     return {
         "schema": "ev_desk_plan_gate_v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "training_runtime": {
+            "python": platform.python_version(),
+            "numpy": np.__version__,
+            "pandas": pd.__version__,
+            "scikit_learn": sklearn.__version__,
+        },
         "status": status,
         "boundary": (
-            "Interpretable logistic gate trained on development, hyperparameters selected on validation, "
+            "Shallow gradient-boosting gate trained on development, hyperparameters and a predeclared coach-vote policy selected on validation, "
             "and evaluated once on final holdout. It may block plans; it never creates an order."
         ),
         "samples": {
@@ -239,7 +350,21 @@ def train(frame):
         "deployment": {
             "mode": "veto_only",
             "scopes": deployment_scopes,
+            "active_coach_ids": active_coach_ids,
             "boundary": "The gate may veto an existing consensus plan only in scopes that were positive in both validation and holdout; it never creates direction, entry, or size.",
+        },
+        "coach_vote_policy": {
+            "selected": selected_vote_policy["id"],
+            "label": selected_vote_policy["label"],
+            "active_vote_features": active_vote_features,
+            "active_coach_ids": active_coach_ids,
+            "suppressed_vote_features": [
+                feature for feature in all_vote_features if feature not in active_vote_features
+            ],
+            "selection_score": selected_vote_policy["selection_score"],
+            "used_holdout": False,
+            "boundary": "The vote-feature count is selected on validation only. Final holdout reports every predeclared control after the policy is frozen; individual coaches still cannot create a trade.",
+            "candidates": vote_policy_reports,
         },
         "probability_quality": {
             "validation": probability_metrics(validation_y, validation_prob),
@@ -250,6 +375,7 @@ def train(frame):
         "model": {
             "type": "shallow_gradient_boosting_classifier",
             "features": feature_columns,
+            "active_vote_features": active_vote_features,
             "base_log_odds": rounded(
                 math.log(model.init_.class_prior_[1] / model.init_.class_prior_[0]), 10
             ),
