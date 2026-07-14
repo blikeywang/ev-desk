@@ -3,7 +3,7 @@ const OKX_TF={"1m":"1m","5m":"5m","15m":"15m","1h":"1H","4h":"4H","1d":"1Dutc"};
 const KRAKEN_TF={"1m":1,"5m":5,"15m":15,"1h":60,"4h":240,"1d":1440};
 const KRAKEN_PAIR={BTCUSDT:"XBTUSDT",ETHUSDT:"ETHUSDT",SOLUSDT:"SOLUSDT"};
 const ALPACA_TF={"1m":"1Min","5m":"5Min","15m":"15Min","1h":"1Hour","4h":"4Hour","1d":"1Day"};
-const YAHOO_TICKER={NDX:"^NDX",XAUUSD:"GC=F",WTI:"CL=F"};
+const YAHOO_TICKER={NDX:"^NDX",NQ:"NQ=F",XAUUSD:"GC=F",WTI:"CL=F"};
 const YAHOO_TF={"1m":["1m","5d"],"5m":["5m","1mo"],"15m":["15m","1mo"],"1h":["60m","3mo"],"4h":["60m","3mo"],"1d":["1d","2y"]};
 
 const cleanSymbol=s=>String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"");

@@ -48,3 +48,14 @@ test("US Tech 100 falls back to the delayed index feed without credentials",asyn
   assert.equal(result.candles.length,80);
   assert.match(requested,/%5ENDX/);
 });
+
+test("NQ futures fall back to the delayed continuous-contract feed",async()=>{
+  const start=1_700_000_000,timestamps=Array.from({length:90},(_,i)=>start+i*60),values=timestamps.map((_,i)=>15_000+i);
+  const payload={chart:{result:[{meta:{symbol:"NQ=F",gmtoffset:-14400},timestamp:timestamps,indicators:{quote:[{open:values,high:values.map(x=>x+1),low:values.map(x=>x-1),close:values,volume:values.map(()=>100)}]}}]}};
+  let requested="";
+  const fetchImpl=async url=>{requested=String(url);return{ok:true,json:async()=>payload};};
+  const result=await fetchCandles("NQ","1m",{limit:80,fetchImpl});
+  assert.equal(result.source,"Yahoo Finance delayed");
+  assert.equal(result.candles.length,80);
+  assert.match(requested,/NQ%3DF/);
+});

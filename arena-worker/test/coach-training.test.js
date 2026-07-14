@@ -145,3 +145,27 @@ test("published coach evidence includes exact recent holdout settlements", async
     }
   }
 });
+
+
+test("published NQ intraday coaches are selected without peeking at holdout", async () => {
+  const payload = JSON.parse(await readFile(new URL("../../data/intraday-coaches.json", import.meta.url), "utf8"));
+  assert.equal(payload.schema, "ev_desk_intraday_coaches_v1");
+  assert.equal(payload.meta.source, "user-supplied NQ continuous 1-minute OHLCV");
+  assert.equal(payload.meta.selection, "all parameters selected on development only; validation and holdout cannot change the selected variant");
+  assert.equal(payload.meta.raw_rows_published, false);
+  assert.deepEqual(payload.active_coach_ids, ["opening_range"]);
+
+  const openingRange = payload.coaches.opening_range;
+  assert.equal(openingRange.status, "historically_supported");
+  assert.equal(openingRange.selected_on, "development_only");
+  assert.equal(openingRange.assessment.deployment, "plan_seat");
+  assert.ok(openingRange.validation.n >= 50 && openingRange.validation.ev >= 0.02);
+  assert.ok(openingRange.holdout.n >= 50 && openingRange.holdout.ev >= 0.02);
+  assert.ok(openingRange.holdout.recent_trades.length > 0 && openingRange.holdout.recent_trades.length <= 20);
+  assert.ok(openingRange.holdout.recent_trades.every((trade) => Number.isFinite(trade.closed_bar_ts) && Number.isFinite(trade.net_r)));
+
+  assert.equal(payload.coaches.vwap_pullback.assessment.deployment, "research_seat");
+  assert.equal(payload.coaches.vwap_pullback.assessment.holdout_pass, false);
+  assert.equal(payload.coaches.opening_failure.assessment.deployment, "research_seat");
+  assert.equal(payload.coaches.opening_failure.assessment.validation_pass, false);
+});

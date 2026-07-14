@@ -12,13 +12,14 @@
 | 永续上下文 | 已完成 | Binance Futures 资金费率、标记价、OI、24H OI 变化、24H 价格与成交额；OKX Swap 降级 |
 | 统一行情 API | 已完成 | `GET /api/v1/market/bundle`，前端优先调用，失败才浏览器直连 |
 | 17 个规则化分析视角 | 已完成 | 每根闭合 K 线保存方向、置信度、理由、计划、版本和证据快照 |
+| NQ 分钟级日内教练 | 1 位计划席，2 位研究席 | 764 个美东正盘日；开盘区间同时通过 2024 验证与 2025+ 最终留出，VWAP 回踩与开盘失败被拒绝 |
 | Paul Wei 行为模型 | 已完成 | 本地 skill + 最新 1H OHLCV 生成结构化观点；通过受保护接口导入 |
 | 历史方法证据 | 已完成首批 | BTC/ETH/SOL 的 15m、1h、4h；统一执行规则、费用、置信区间和回撤 |
 | 长历史教练训练 | 14 位完成，3 位待补输入 | Paul 真实账本 + BTC/ETH/NQ/ES；12 个范围，开发/验证/最终留出严格按时间切分 |
 | 计划质量门控 | 受限上线 | 248,295 个候选计划训练；仅 BTC 1h、ETH 4h 可作“只否决”安全层 |
 | 24H 前瞻赛场 | 已完成 | Cloudflare Worker + D1 + 定时任务 + 连续哈希账本 |
 | 宏观数据 | 接口完成，需密钥 | FRED 的 10Y、10Y 实际利率、广义美元、VIX、Fed 资产负债表 |
-| 美股与 US Tech 100 | 已可使用延迟行情 | GitHub 每 30 分钟发布闭合 K 线快照；有凭证时 Worker 优先 Alpaca；US Tech 100 对应 `^NDX` |
+| 美股、NQ 与 US Tech 100 | 已可使用延迟行情 | AAPL/MSFT/NVDA/AMZN/META/GOOGL/TSLA/AMD/AVGO/MU、SPY/QQQ、`NQ=F` 与 `^NDX`；GitHub 每 30 分钟发布闭合 K 线快照，美股有凭证时 Worker 优先 Alpaca |
 | 黄金与原油 | 已可使用延迟行情 | 定时快照使用 Yahoo Finance 的 `GC=F` 与 `CL=F`；生产低延迟或商业服务仍应换成有相应许可的数据源 |
 | 决策 K 线 | 已完成 | 前端自绘 OHLC、成交量、EMA20/50、关键区与参考进场/止损/目标；和专家计划使用同一份行情与价位对象 |
 | 机会雷达 | 已完成 | 自动扫描跨资产自选池，隔离每个品种的资金费率与专家上下文，记录已收盘证据时点，并区分触发、接近、等待与失效 |
@@ -135,7 +136,7 @@ Paul Wei 在系统里是 `behavior_model`，不是普通技术指标，也不是
 | ETHUSDT 指数 1m | 2,884,312 | 2021-01-01 至 2026-06-30 | 基差对齐与质量检查 |
 | BTC 衍生品指标 5m | 577,415 个唯一时点 | 2021-01-01 至 2026-07-01 | OI/仓位/taker 上下文质检 |
 | ETH 衍生品指标 5m | 481,684 | 2021-12-01 至 2026-07-01 | 部分 OI/仓位/taker 上下文质检 |
-| NQ 1m | 1,048,575 | 2022-12-26 至 2025-12-11 | 跨资产压力测试 |
+| NQ 1m | 1,048,575 | 2022-12-26 至 2025-12-11 | 通用跨资产压力测试 + NQ 日内独立考场 |
 | ES 主力连续 1m | 355,021 | 2023-11-20 至 2024-11-19 | 跨资产压力测试 |
 
 BTC/ETH 主训练行情各自完整连续，没有缺失分钟。指数和指标目前只用于数据对齐、质量判断与后续上下文特征储备，不会假装已经进入本版计划模型。
@@ -228,22 +229,43 @@ scopes: BTCUSDT|1h, ETHUSDT|4h
 
 门控只可拒绝 EV Desk 已经生成的方向与关键位计划；不能创建方向、入场、止损、目标或仓位。其他标的/周期仍能查看规则计划，但网页必须显示“未获得训练授权”。最终留出正值是研究证据，持续上线资格仍由封存后的前向赛场确认。
 
-### 4.7 数据质量问题
+### 4.7 NQ 1 分钟日内独立考场
+
+通用教练在 15m/1h/4h 上表现不佳后，系统没有继续增加主观流派名称，而是建立了一个只处理美东正盘的分钟级考场。原始 NQ 连续合约中提取 764 个 `09:30–16:00 ET` 交易日；所有参数只在 2023 及以前选择，2024 只负责验证，2025+ 只负责最终留出。
+
+统一执行口径：信号只看已闭合的 1 分钟 K 线，下一根开盘成交；每个教练每天最多一笔；同一根同时碰止损和目标时先止损；正盘结束强平；每笔固定预留 1.25 NQ 点往返执行成本；最小结构风险 4 点。验证与留出都必须满足 `n >= 50`、`EV >= +0.02R`、累计 R 为正、Profit Factor 大于 1，才能拿到计划席。
+
+| 候选教练 | 开发集冻结规则 | 2024 验证 | 2025+ 最终留出 | 权限 |
+|---|---|---:|---:|---|
+| 开盘区间 | 30m OR、8% 缓冲、10:30 ET 截止、0.75 倍区间止损、2R 目标 | 191 笔，`+0.068R`，PF 1.14 | 154 笔，`+0.045R`，PF 1.09 | NQ/MNQ 单市场计划席 |
+| VWAP 首次回踩 | 15m 结构、首次回踩、3 小时截止、1.5R 目标 | 183 笔，`+0.075R` | 177 笔，`-0.062R` | 最终留出拒绝，只作研究 |
+| 开盘失败反转 | 30m OR、15% 外扩失败、10:30 ET 截止、1.2R 目标 | 115 笔，`-0.124R` | 92 笔，`-0.015R` | 验证拒绝，只作反证 |
+
+开盘区间的开发、验证与留出累计分别为 `+33.86R`、`+12.94R`、`+6.99R`；最终留出最大回撤 `-6.41R`。但其最终留出 EV 95% 区间为 `[-0.136R, +0.226R]`，仍跨过 0，因此只给 B+，不能宣传成已证明的稳定优势。持续权限由前瞻赛场决定。
+
+方法族参考 Zarattini 与 Aziz 的公开开盘区间/VWAP 研究；EV Desk 的参数搜索、成本、进出场和拒绝门槛是独立实现，不声称复现论文结果。NQ 证据可用于同标的的 MNQ 风险缩放，但不能迁移成 AAPL、NVDA 等个股授权。个股页面目前只提供同规则的前向观察；要升级为计划席，必须补充含盘前与正盘、拆股复权且具合并成交量的分钟历史，再按同样时间封存流程重训。
+
+实时决策另有数据新鲜度门槛：延迟 NQ 行情可显示 OR、RTH VWAP、参考入场/止损/目标和历史触发，但不会开放可执行记录。低延迟 NQ 数据接入后，信号仍须是 10:30 ET 前刚闭合的首次突破；旧信号禁止追价。
+
+### 4.8 数据质量问题
 
 - NQ 文件恰好包含 Excel 最大的 1,048,575 个数据行加表头，可能在导出时被截断。
+- NQ 正盘切片共 292,908 根：时间戳无重复，OHLC、成交量与 RTH VWAP 无缺失，未发现负成交量或 OHLC 关系异常。30 个不足 380 分钟的交易日均为提前收盘日；另有一个只含 09:30 的残缺日，已因不足 200 根被排除。
 - BTC 指标原始文件有 40,152 条完全重复记录，已按时点去重。
 - BTC 指数缺失 18,727 分钟，ETH 指数缺失 5,768 分钟；均不用于替代完整永续行情。
 - ETH 指标从 2021-12-01 才开始，完整行情窗口的小时匹配率为 83.34%。
 - ES 原文件混有 ES、MES、价差与远月。管线只保留 ES 单腿，按每日成交量选择主力，并记录 4 次前向加法移仓调整。
 - Paul 执行 ID 无重复；订单中有 35 个重复 ID/重复行，保留在质量统计中。
 
-### 4.8 产物与重训
+### 4.9 产物与重训
 
 可发布文件：
 
 - `data/coach-training.json` / `data/coach-training.js`
 - `data/plan-gate-model.json` / `data/plan-gate-model.js`
+- `data/intraday-coaches.json` / `data/intraday-coaches.js`
 - `tools/prepare_coach_training.py`
+- `tools/build_intraday_coaches.py`
 - `arena-worker/scripts/build-coach-training.mjs`
 - `arena-worker/scripts/export-plan-training-samples.mjs`
 - `tools/train_plan_gate.py`
@@ -351,8 +373,15 @@ python3 -m http.server 8780
 ### 美股生产行情可选增强
 
 - Alpaca Market Data key/secret
-- `iex` 可作为基础免费数据；需要完整美股覆盖和更低延迟时使用有相应权限的 SIP 方案
-- 不申请密钥也能查看美股、US Tech 100、黄金和原油的延迟 K 线，但免费备援可能受限流影响，不承诺交易所级实时性
+- `iex` 可作为基础免费预览，但它只代表 IEX 单一交易所；训练个股 VWAP、相对成交量和开盘行为时应使用有相应权限的 SIP 合并行情
+- 不申请密钥也能查看美股、NQ、US Tech 100、黄金和原油的延迟 K 线，但免费备援可能受限流影响，不承诺交易所级实时性
+
+### NQ/MNQ 低延迟行情可选增强
+
+- 当前 `NQ=F` 免费备援只用于延迟图表和复盘，不能满足分钟信号执行的新鲜度门槛。
+- 生产可申请支持 CME Globex 的 Databento key，使用 `GLBX.MDP3` 的 NQ 连续/父合约数据，或接入其他已获 CME 行情许可的数据商。
+- NQ 与 MNQ 共用指数点位计划，但仓位乘数不同：NQ 为 `$20/点`，MNQ 为 `$2/点`；页面按整手向下取整，并把 1.25 点执行预留计入单手风险。
+- TradingView Charting Library 是显示层，不提供可转授权的 NQ 行情；即使申请完整图表库，仍需要自有 datafeed 与数据许可。
 
 ### TradingView 完整图表可选
 
@@ -434,3 +463,8 @@ python3 -m http.server 8780
 - OKX API v5: https://www.okx.com/docs-v5/en/
 - FRED API: https://fred.stlouisfed.org/docs/api/fred/overview.html
 - Alpaca Market Data: https://docs.alpaca.markets/us/docs/about-market-data-api
+- Alpaca Market Data FAQ（IEX 与 SIP 边界）: https://docs.alpaca.markets/us/docs/market-data-faq
+- Databento Quickstart / GLBX.MDP3: https://databento.com/docs/quickstart
+- CME E-mini Nasdaq-100 合约规格: https://www.cmegroup.com/trading/equity-index/files/emini-nasdaq-100-futures-options.pdf
+- Opening Range Breakout 研究（SSRN 4416622）: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4416622
+- VWAP 日内研究（SSRN 4631351）: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4631351

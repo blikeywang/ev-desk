@@ -26,7 +26,7 @@ test("radar scans a cross-asset watchlist and exposes trigger filters", async ()
   const html = await readFile(appPath, "utf8");
   assert.match(html, /data-filter="ready"/);
   assert.match(html, /triggerCode/);
-  assert.match(html, /"NDX","QQQ","SPY","XAUUSD","WTI"/);
+  assert.match(html, /"NQ","QQQ","NVDA","TSLA","SPY","XAUUSD"/);
   assert.match(html, /closedPrimaryCandles\(\)\.at\(-1\)/);
 });
 
@@ -45,4 +45,31 @@ test("coach history renders curves, recent settlements and evidence levels", asy
   assert.match(html, /反向结果单独记账，不替代原专家战绩/);
   assert.match(html, /只否决，不发单/);
   assert.match(html, /当前范围未获授权/);
+});
+
+
+test("NQ and US-stock intraday coverage keeps exact evidence boundaries", async () => {
+  const html = await readFile(appPath, "utf8");
+  assert.match(html, /data\/intraday-coaches\.js/);
+  assert.match(html, /function sessionCoachContext\(\)/);
+  assert.match(html, /NQ 日内计划席/);
+  assert.match(html, /个股不能继承这项授权/);
+  assert.match(html, /\$20\/点.*\$2\/点/);
+  assert.match(html, /RTH VWAP/);
+  assert.match(html, /result\.auditPlan=/);
+  assert.match(html, /forwardStep\(symbol,timeframe,ohlc\.data,CARDS\)/);
+});
+
+
+test("every selectable US market has a deployable fallback snapshot", async () => {
+  const symbols = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "AMD", "AVGO", "MU", "SPY", "QQQ", "NDX", "NQ"];
+  for (const symbol of symbols) {
+    const url = new URL(`../../data/market-snapshots/${symbol}.json`, import.meta.url);
+    const payload = JSON.parse(await readFile(url, "utf8"));
+    assert.equal(payload.schema, "ev_desk_market_snapshot_v1");
+    assert.equal(payload.symbol, symbol);
+    for (const timeframe of ["1m", "5m", "15m", "1h", "4h", "1d"]) {
+      assert.ok(payload.data[timeframe].length >= 80, `${symbol} ${timeframe} fallback is incomplete`);
+    }
+  }
 });

@@ -1,7 +1,11 @@
 import {mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
 
-const SYMBOLS={AAPL:"AAPL",NVDA:"NVDA",SPY:"SPY",QQQ:"QQQ",NDX:"^NDX",XAUUSD:"GC=F",WTI:"CL=F"};
+const SYMBOLS={
+  AAPL:"AAPL",MSFT:"MSFT",NVDA:"NVDA",AMZN:"AMZN",META:"META",GOOGL:"GOOGL",
+  TSLA:"TSLA",AMD:"AMD",AVGO:"AVGO",MU:"MU",SPY:"SPY",QQQ:"QQQ",NDX:"^NDX",
+  NQ:"NQ=F",XAUUSD:"GC=F",WTI:"CL=F"
+};
 const SPECS={"1m":["1m","5d"],"5m":["5m","1mo"],"15m":["15m","1mo"],"1h":["60m","3mo"],"1d":["1d","2y"]};
 const TF_SECONDS={"1m":60,"5m":300,"15m":900,"1h":3600,"4h":14400,"1d":86400};
 const outputDir=path.resolve(process.argv[2]||"data/market-snapshots");

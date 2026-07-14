@@ -17,6 +17,11 @@ fi
   --data-root "$DATA_ROOT" \
   --work-dir "$WORK_DIR"
 
+"$PYTHON" "$ROOT/tools/build_intraday_coaches.py" \
+  --data-root "$DATA_ROOT" \
+  --output "$ROOT/data/intraday-coaches.json" \
+  --js-output "$ROOT/data/intraday-coaches.js"
+
 node "$ROOT/arena-worker/scripts/build-coach-training.mjs" \
   --manifest "$WORK_DIR/manifest.json" \
   --output "$ROOT/data/coach-training.json" \
