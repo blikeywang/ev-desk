@@ -54,3 +54,19 @@ test("published plan gate remains a narrow veto-only guardrail", async () => {
   assert.deepEqual(payload.deployment.scopes, ["BTCUSDT|1h", "ETHUSDT|4h"]);
   assert.ok(payload.model.trees.length > 0);
 });
+
+
+test("published coach evidence includes exact recent holdout settlements", async () => {
+  const payload = JSON.parse(await readFile(new URL("../../data/coach-training.json", import.meta.url), "utf8"));
+  const completed = Object.values(payload.experts).filter((expert) => expert.aggregate_holdout.n > 0);
+  assert.ok(completed.length >= 14);
+  for (const expert of completed) {
+    const populated = Object.values(expert.scopes).map((scope) => scope.holdout).filter((scope) => scope.n > 0);
+    assert.ok(populated.length > 0);
+    for (const scope of populated) {
+      assert.ok(Array.isArray(scope.recent_trades));
+      assert.ok(scope.recent_trades.length > 0 && scope.recent_trades.length <= 20);
+      assert.ok(scope.recent_trades.every((trade) => Number.isFinite(trade.closed_bar_ts) && Number.isFinite(trade.net_r)));
+    }
+  }
+});

@@ -100,13 +100,22 @@ function wilson(wins,n,z=1.96){
 function downsample(curve,max=80){
   if(curve.length<=max)return curve.map(x=>round(x,3));const out=[];for(let i=0;i<max;i++)out.push(round(curve[Math.min(curve.length-1,Math.floor(i*(curve.length-1)/(max-1)))],3));return out;
 }
-export function summarizeTrades(rows){
+export function summarizeTrades(rows,options={}){
   const R=rows.map(x=>+x.net_r),n=R.length,wins=R.filter(x=>x>0).length,gp=R.filter(x=>x>0).reduce((a,b)=>a+b,0),gl=Math.abs(R.filter(x=>x<=0).reduce((a,b)=>a+b,0));let eq=0,peak=0,mdd=0;const curve=[];
   R.forEach(r=>{eq+=r;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);curve.push(eq);});
   const ev=mean(R),variance=n>1?R.reduce((s,x)=>s+(x-ev)**2,0)/(n-1):0,se=Math.sqrt(variance/Math.max(1,n)),winCi=wilson(wins,n);
   const cutoff=rows.length?rows.at(-1).closed_bar_ts-90*86400:0,recent=R.filter((_,i)=>rows[i].closed_bar_ts>=cutoff),prior=R.filter((_,i)=>rows[i].closed_bar_ts<cutoff&&rows[i].closed_bar_ts>=cutoff-90*86400);
   const byRegime={};rows.forEach(x=>(byRegime[x.regime]||(byRegime[x.regime]=[])).push(x));
-  return{n,win:round(n?wins/n*100:0,1),win_ci95:winCi.map(x=>round(x*100,1)),ev:round(ev,3),ev_ci95:[round(ev-1.96*se,3),round(ev+1.96*se,3)],pf:round(gl?gp/gl:(gp?9.99:0),2),mdd:round(mdd,2),total_r:round(eq,2),recent_90d_ev:recent.length?round(mean(recent),3):null,prior_90d_ev:prior.length?round(mean(prior),3):null,drift_90d:recent.length&&prior.length?round(mean(recent)-mean(prior),3):null,curve:downsample(curve),first_trade:rows[0]?.opened_bar_ts||null,last_trade:rows.at(-1)?.closed_bar_ts||null,regimes:Object.fromEntries(Object.entries(byRegime).map(([k,v])=>[k,{n:v.length,ev:round(mean(v.map(x=>x.net_r)),3)}]))};
+  const recentTrades=rows.slice(-20).map(row=>({
+    closed_bar_ts:row.closed_bar_ts,
+    direction:row.direction,
+    net_r:round(+row.net_r,3),
+    close_reason:row.close_reason,
+    regime:row.regime,
+  }));
+  const summary={n,win:round(n?wins/n*100:0,1),win_ci95:winCi.map(x=>round(x*100,1)),ev:round(ev,3),ev_ci95:[round(ev-1.96*se,3),round(ev+1.96*se,3)],pf:round(gl?gp/gl:(gp?9.99:0),2),mdd:round(mdd,2),total_r:round(eq,2),recent_90d_ev:recent.length?round(mean(recent),3):null,prior_90d_ev:prior.length?round(mean(prior),3):null,drift_90d:recent.length&&prior.length?round(mean(recent)-mean(prior),3):null,curve:downsample(curve),first_trade:rows[0]?.opened_bar_ts||null,last_trade:rows.at(-1)?.closed_bar_ts||null,regimes:Object.fromEntries(Object.entries(byRegime).map(([k,v])=>[k,{n:v.length,ev:round(mean(v.map(x=>x.net_r)),3)}]))};
+  if(options.includeRecent)summary.recent_trades=recentTrades;
+  return summary;
 }
 
 function scopeKey(symbol){return symbol.replace(/USDT$/,"");}

@@ -14,10 +14,26 @@ test("historical simulator emits only future-bar settlements",()=>{
 });
 
 test("evidence summary exposes uncertainty and drawdown",()=>{
-  const rows=[1,-1,.5,-.25].map((r,i)=>({net_r:r,opened_bar_ts:100+i,closed_bar_ts:200+i,regime:i<2?"trend":"range"})),s=summarizeTrades(rows);
+  const rows=[1,-1,.5,-.25].map((r,i)=>({net_r:r,opened_bar_ts:100+i,closed_bar_ts:200+i,direction:i%2?"short":"long",close_reason:i%2?"stop":"target",regime:i<2?"trend":"range"})),s=summarizeTrades(rows,{includeRecent:true});
   assert.equal(s.n,4);
   assert.equal(s.win,50);
   assert.equal(s.win_ci95.length,2);
   assert.ok(s.mdd<=0);
   assert.equal(Object.keys(s.regimes).length,2);
+  assert.equal(s.recent_trades.length,4);
+  assert.deepEqual(s.recent_trades.at(-1),{
+    closed_bar_ts:203,
+    direction:"short",
+    net_r:-0.25,
+    close_reason:"stop",
+    regime:"range",
+  });
+});
+
+test("evidence summary publishes no more than the latest 20 exact settlements",()=>{
+  const rows=Array.from({length:25},(_,i)=>({net_r:i-12,opened_bar_ts:100+i,closed_bar_ts:200+i,direction:"long",close_reason:"timeout_30",regime:"trend"}));
+  const summary=summarizeTrades(rows,{includeRecent:true});
+  assert.equal(summary.recent_trades.length,20);
+  assert.equal(summary.recent_trades[0].closed_bar_ts,205);
+  assert.equal(summary.recent_trades.at(-1).closed_bar_ts,224);
 });

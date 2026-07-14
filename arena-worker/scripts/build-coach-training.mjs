@@ -318,7 +318,7 @@ export async function buildCoachTraining(manifestPath) {
       const record = {
         development: summarizeTrades(split.development),
         validation: summarizeTrades(split.validation),
-        holdout: summarizeTrades(split.holdout),
+        holdout: summarizeTrades(split.holdout, { includeRecent: true }),
         all: summarizeTrades(rows),
       };
       record.holdout.prior_multiplier = scopePrior(record.holdout);
