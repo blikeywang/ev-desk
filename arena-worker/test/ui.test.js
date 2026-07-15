@@ -37,6 +37,11 @@ test("first-visit tutorial explains every workspace and remains manually replaya
   assert.match(html, /以后不再自动弹出/);
   assert.match(html, /onclick="startTour\(true\)"/);
   assert.match(html, /reload\(\)\.finally\(maybeStartTour\)/);
+  assert.match(html, /教学示例 · 不是当前交易建议/);
+  assert.match(html, /主计划是回踩 98 入场、95 止损、104 目标/);
+  assert.match(html, /本次 1R 就是最多承担 100 美元/);
+  assert.match(html, /62分不是 62% 胜率/);
+  assert.match(html, /把 NQ 放入等待清单/);
 });
 
 

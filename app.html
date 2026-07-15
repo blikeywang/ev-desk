@@ -288,24 +288,29 @@
   .tour-scrim{position:fixed;inset:0;z-index:0;background:rgba(3,7,12,.82);pointer-events:auto}
   .tour-root.has-target .tour-scrim{background:transparent}
   .tour-spotlight{position:fixed;z-index:1;border:2px solid #75adff;border-radius:8px;box-shadow:0 0 0 9999px rgba(3,7,12,.82),0 0 0 5px rgba(59,130,246,.22);pointer-events:none;transition:top .22s ease,left .22s ease,width .22s ease,height .22s ease}
-  .tour-card{position:fixed;z-index:2;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:#151b24;border:1px solid #41516a;border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:16px;pointer-events:auto}
+  .tour-card{position:fixed;z-index:2;display:flex;flex-direction:column;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:hidden;background:#151b24;border:1px solid #41516a;border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:16px;pointer-events:auto}
   .tour-card.centered{left:50%;top:50%;transform:translate(-50%,-50%)}
   .tour-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
   .tour-kicker{font-size:10.5px;font-weight:800;color:#8db9ff;text-transform:uppercase}
   .tour-close{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
   .tour-close:hover{background:var(--panel2);color:#fff}
+  .tour-content{min-height:0;overflow-y:auto;padding-right:3px;scrollbar-color:#41516a transparent;overscroll-behavior:contain}
   .tour-title{font-size:18px;line-height:1.35;margin:7px 0 5px}
   .tour-copy{color:#c9d1d9;font-size:12.5px;margin:0}
   .tour-points{display:grid;gap:7px;margin:12px 0 0;padding:0;list-style:none}
   .tour-points li{position:relative;padding-left:16px;color:#d8e0e8;font-size:12px}
   .tour-points li::before{content:"";position:absolute;left:1px;top:7px;width:6px;height:6px;border-radius:50%;background:#6ea8fe}
+  .tour-example{margin-top:12px;padding:11px 12px;background:#20231f;border:1px solid #4d4930;border-left:3px solid var(--warn);border-radius:6px}
+  .tour-example-title{font-size:10.5px;font-weight:800;color:#e3c07a;margin-bottom:7px}
+  .tour-example-row{display:grid;grid-template-columns:42px minmax(0,1fr);gap:7px;font-size:11.5px;line-height:1.55;margin-top:5px}.tour-example-row b{color:#e3c07a}.tour-example-row span{color:#d8e0e8}
+  .tour-footer{flex:0 0 auto;background:#151b24}
   .tour-progress{height:3px;background:#293241;border-radius:2px;overflow:hidden;margin:14px 0 11px}.tour-progress i{display:block;height:100%;background:#3b82f6;transition:width .2s ease}
   .tour-prefs{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;cursor:pointer}.tour-prefs input{accent-color:var(--accent)}
   .tour-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:13px}.tour-actions-main{display:flex;gap:7px;margin-left:auto}
   .tour-actions .btn{min-height:34px}.tour-actions .btn:disabled{opacity:.4;cursor:not-allowed}
   @media(prefers-reduced-motion:reduce){.tour-spotlight{transition:none}}
   @media(max-width:680px){
-    .tour-card,.tour-card.centered{left:12px!important;right:12px!important;top:auto!important;bottom:12px!important;width:auto;max-height:min(55vh,440px);transform:none!important}
+    .tour-card,.tour-card.centered{left:12px!important;right:12px!important;top:auto!important;bottom:12px!important;width:auto;max-height:min(62vh,520px);transform:none!important}
     .tour-spotlight{border-radius:6px}
     .tour-actions{align-items:flex-end}.tour-actions-main{flex-wrap:wrap;justify-content:flex-end}
   }
@@ -461,12 +466,17 @@
   <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true" hidden></div>
   <section class="tour-card centered" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourCopy">
     <div class="tour-card-head"><span class="tour-kicker" id="tourStepLabel">EV Desk 使用教程</span><button type="button" class="tour-close" id="tourClose" aria-label="关闭教程" title="关闭教程">×</button></div>
+    <div class="tour-content" id="tourContent">
     <h2 class="tour-title" id="tourTitle" tabindex="-1"></h2>
     <p class="tour-copy" id="tourCopy"></p>
     <ul class="tour-points" id="tourPoints"></ul>
+    <div class="tour-example" id="tourExample" hidden></div>
+    </div>
+    <div class="tour-footer">
     <div class="tour-progress" aria-hidden="true"><i id="tourProgress"></i></div>
     <label class="tour-prefs"><input type="checkbox" id="tourNoAuto">以后不再自动弹出（仍可在顶部重看）</label>
     <div class="tour-actions"><button type="button" class="btn" id="tourSkip">跳过</button><div class="tour-actions-main"><button type="button" class="btn" id="tourPrev">上一步</button><button type="button" class="btn primary" id="tourNext">下一步</button></div></div>
+    </div>
   </section>
 </div>
 
@@ -2332,10 +2342,10 @@ const TOUR_STEPS=[
   {page:"desk",selector:".nav",title:"五个页面，就是一条完整工作流",copy:"从找机会、做计划，到检查教练和复盘自己，按从左到右的顺序使用即可。",points:["决策台：只研究一个市场的一笔计划","雷达：从自选池里找值得进一步看的标的","历史战绩：检查教练有没有证据和权限","成长 / 我的：记录自己的执行并管理设置"]},
   {page:"desk",selector:"#deskOverview",title:"先选市场和周期，再确认数据能不能用",copy:"上面一行决定你在看什么；下面的数据状态告诉你这份判断基于哪批行情。",points:["前两个下拉框选择标的和 K 线周期","“延迟行情”只适合做计划，不应当作成交级实时报价","账户和单笔风险只影响仓位计算，不会改变方向判断"]},
   {page:"desk",selector:".decision-chart",title:"K 线用来定位，不是用来猜涨跌",copy:"图上的线把专家计划落回真实价格，让你知道观点具体对应哪里。",points:["蜡烛和均线帮助辨认趋势、波动与位置","黄色、红色、绿色线分别对应参考进场、止损和目标","可拖动缩放，也可用工具画趋势线、水平线和复位"]},
-  {page:"desk",selector:"#pretradeMap",title:"把“我感觉”改写成可检查的计划",copy:"下单前地图把关键区域、备选路径和失效条件放在一起。",points:["左边看当前价格靠近哪一层支撑或阻力","右边比较主计划和备选计划的进场、止损、目标","没有到触发位置，或赔率不够，就继续等待"]},
-  {page:"desk",selector:"#evcard",title:"先读行动卡，再看下面的专家",copy:"这张卡是当前页面最重要的结论，优先告诉你现在该做什么，而不是堆术语。",points:["方向可能是做多、做空，也可能明确“不下单”","赔率、风险金额和仓位按你的账户设置计算","结论下方的多空刻度只是专家结构共识，不等于胜率"]},
-  {page:"desk",selector:"#grid .card",title:"每位教练只是一个观察角度",copy:"教练卡解释“为什么”，但没有任何一位专家可以绕过计划和风险纪律。",points:["卡片展示方向、理由、参考价位和当前可信度","点击卡片可查看历史证据、近期表现与适用范围","失败或证据不足的教练会被降权，不会被包装成信号"]},
-  {page:"radar",selector:".opp-hero",title:"雷达帮你排队，不替你预测",copy:"雷达扫描自选池，先把计划不完整的市场排到后面，减少到处追行情。",points:["机会分衡量位置、赔率、共识和证据完整度，不是胜率","A 到 D 表示当前计划成熟度，并配有下一步动作","“扫描自选”会重新检查；失败的数据源也会如实保留"]},
+  {page:"desk",selector:"#pretradeMap",title:"把“我感觉”改写成可检查的计划",copy:"下单前地图把关键区域、备选路径和失效条件放在一起。先看位置，再算赔率，最后等触发。",points:["左边看当前价格靠近哪一层支撑或阻力","右边比较主计划和备选计划的进场、止损、目标","没有到触发位置，或赔率不够，就继续等待"],example:{scene:"假设当前价 100；主计划是回踩 98 入场、95 止损、104 目标。",read:"从 98 到 95 风险为 3，从 98 到 104 潜在收益为 6，所以计划赔率是 1:2。",action:"价格仍在 100 时不追；到 98 且出现触发才考虑；若先跌破 95，整套多头计划作废。"}},
+  {page:"desk",selector:"#evcard",title:"先读行动卡，再看下面的专家",copy:"这张卡是当前页面最重要的结论。依次读“现在做什么、为什么、最多承担多少风险”，不要只盯方向颜色。",points:["方向可能是做多、做空，也可能明确“不下单”","赔率、风险金额和仓位按你的账户设置计算","结论下方的多空刻度只是专家结构共识，不等于胜率"],example:{scene:"账户 10,000 美元，单笔风险 1%，本次 1R 就是最多承担 100 美元；计划进场 98、止损 95。",read:"页面会用 100 美元风险预算与 3 点止损距离计算参考仓位；期货和合约还要按各自乘数换算。",action:"若行动卡写“不下单”，这 100 美元风险预算就不使用；它不代表应该反手做空。"}},
+  {page:"desk",selector:"#grid .card",title:"每位教练只是一个观察角度",copy:"教练卡解释“为什么”，但没有任何一位专家可以绕过位置、赔率、权限和风险纪律。",points:["卡片展示方向、理由、参考价位和当前可信度","点击卡片可查看历史证据、近期表现与适用范围","失败或证据不足的教练会被降权，不会被包装成信号"],example:{scene:"趋势与突破教练支持做多，均值回归教练反对；当前只有开盘区间教练拥有 NQ 1分钟的有限计划席。",read:"多空刻度可能偏多，但它只表示观察角度的加权共识；没有合格位置或授权，仍然不能执行。",action:"点开支持和反对的卡片，先看最终留出 EV、样本量与近期结算，再决定这条意见能占多少权重。"}},
+  {page:"radar",selector:".opp-hero",title:"雷达帮你排队，不替你预测",copy:"雷达扫描自选池，先把计划不完整的市场排到后面。正确用法是决定“先研究谁”，不是决定“立刻买谁”。",points:["机会分衡量位置、赔率、共识和证据完整度，不是胜率","A 到 D 表示当前计划成熟度，并配有下一步动作","“扫描自选”会重新检查；失败的数据源也会如实保留"],example:{scene:"NQ 显示 B级、62分、接近触发、赔率 1:1.8；另一个标的是 D级、25分。",read:"62分不是 62% 胜率，只表示 NQ 的计划比 D级标的更完整，值得优先打开行动卡核对。",action:"把 NQ 放入等待清单，等价格到位与收盘确认；D级直接略过，不因它突然上涨就追单。"}},
   {page:"arena",selector:".arena-hero",title:"先看教练过去是否经得住考试",copy:"历史战绩页回答的不是“谁最会说”，而是谁在相同规则和成本下留下了可核验结果。",points:["看累计 R 曲线、最近结算、样本量和每笔期望","验证集与最终留出分开，避免拿答案反复调参数","只有通过门槛的教练进入计划席，失败证据不会删除"]},
   {page:"growth",selector:"#growthBox",title:"真正需要持续优化的是你的执行",copy:"成长页把你记录的交易换算成统一的 R，避免被账户大小和单笔盈亏误导。",points:["交易结束后标记赢、输或平，形成个人曲线","重点看每笔期望、累计 R、止损率和合格赔率占比","数据只保存在当前设备，先从少量真实记录开始"]},
   {page:"me",selector:"#meBox",title:"最后管理风险、扫描池和教程",copy:"这里集中放个人参数。教程结束后，顶部的问号按钮仍然可以随时重新打开。",points:["设置账户金额、单笔风险和雷达自选池","个人偏好与交易记录只保存在当前设备","可以勾选“以后不再自动弹出”，手动重看不受影响"]}
@@ -2369,6 +2379,8 @@ function renderTourStep(){
   document.getElementById("tourStepLabel").textContent=`EV Desk 使用教程 · ${tourState.index+1}/${TOUR_STEPS.length}`;
   document.getElementById("tourTitle").textContent=step.title;document.getElementById("tourCopy").textContent=step.copy;
   document.getElementById("tourPoints").innerHTML=step.points.map(point=>`<li>${point}</li>`).join("");
+  const example=document.getElementById("tourExample");example.hidden=!step.example;example.innerHTML=step.example?`<div class="tour-example-title">教学示例 · 不是当前交易建议</div><div class="tour-example-row"><b>场景</b><span>${step.example.scene}</span></div><div class="tour-example-row"><b>怎么读</b><span>${step.example.read}</span></div><div class="tour-example-row"><b>怎么做</b><span>${step.example.action}</span></div>`:"";
+  document.getElementById("tourContent").scrollTop=0;
   document.getElementById("tourProgress").style.width=`${(tourState.index+1)/TOUR_STEPS.length*100}%`;
   document.getElementById("tourPrev").disabled=tourState.index===0;document.getElementById("tourNext").textContent=tourState.index===TOUR_STEPS.length-1?"完成教程":"下一步";
   const target=tourTarget(),behavior=window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
