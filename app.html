@@ -16,7 +16,12 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
     font-size:14px;line-height:1.5}
   .wrap{max-width:1180px;margin:0 auto;padding:20px}
+  .desk-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
   header h1{font-size:20px;margin:0 0 4px}
+  .tour-launch{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;background:var(--panel);border:1px solid var(--border);color:var(--txt);padding:7px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700}
+  .tour-launch:hover{border-color:var(--accent);background:var(--panel2)}
+  .tour-launch:focus-visible{outline:2px solid #6ea8fe;outline-offset:2px}
+  .tour-launch-mark{display:grid;place-items:center;width:18px;height:18px;border:1px solid #6ea8fe;border-radius:50%;color:#9bc2ff;font-size:11px}
   .sub{color:var(--muted);font-size:13px}
   .status{font-size:12px;margin:6px 0}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
@@ -268,6 +273,7 @@
   @media(max-width:720px){.discipline-protocol{grid-template-columns:1fr}}
   @media(max-width:520px){
     .wrap{padding:14px 12px}
+    .desk-header{gap:8px}.tour-launch{padding:7px}.tour-launch-label{display:none}
     .nav{gap:0;justify-content:space-between;scrollbar-width:none}
     .nav::-webkit-scrollbar{display:none}
     .nav a{padding:8px 6px;font-size:12px}
@@ -276,14 +282,44 @@
     .context-cell{padding:8px}.chart-wrap{height:330px}.chart-plan{text-align:left}.chart-toolbar{overflow-x:auto}.seg button{padding:6px 8px}.coach-overview{grid-template-columns:1fr}.research-band.detail{grid-template-columns:1fr}
   }
   footer{color:var(--muted);font-size:12px;margin:22px 0 10px;text-align:center}
+  /* 首次使用与可重复打开的产品教程 */
+  .tour-root[hidden]{display:none}
+  .tour-root{position:fixed;inset:0;z-index:1000;pointer-events:none}
+  .tour-scrim{position:fixed;inset:0;z-index:0;background:rgba(3,7,12,.82);pointer-events:auto}
+  .tour-root.has-target .tour-scrim{background:transparent}
+  .tour-spotlight{position:fixed;z-index:1;border:2px solid #75adff;border-radius:8px;box-shadow:0 0 0 9999px rgba(3,7,12,.82),0 0 0 5px rgba(59,130,246,.22);pointer-events:none;transition:top .22s ease,left .22s ease,width .22s ease,height .22s ease}
+  .tour-card{position:fixed;z-index:2;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:#151b24;border:1px solid #41516a;border-radius:8px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:16px;pointer-events:auto}
+  .tour-card.centered{left:50%;top:50%;transform:translate(-50%,-50%)}
+  .tour-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .tour-kicker{font-size:10.5px;font-weight:800;color:#8db9ff;text-transform:uppercase}
+  .tour-close{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+  .tour-close:hover{background:var(--panel2);color:#fff}
+  .tour-title{font-size:18px;line-height:1.35;margin:7px 0 5px}
+  .tour-copy{color:#c9d1d9;font-size:12.5px;margin:0}
+  .tour-points{display:grid;gap:7px;margin:12px 0 0;padding:0;list-style:none}
+  .tour-points li{position:relative;padding-left:16px;color:#d8e0e8;font-size:12px}
+  .tour-points li::before{content:"";position:absolute;left:1px;top:7px;width:6px;height:6px;border-radius:50%;background:#6ea8fe}
+  .tour-progress{height:3px;background:#293241;border-radius:2px;overflow:hidden;margin:14px 0 11px}.tour-progress i{display:block;height:100%;background:#3b82f6;transition:width .2s ease}
+  .tour-prefs{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;cursor:pointer}.tour-prefs input{accent-color:var(--accent)}
+  .tour-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:13px}.tour-actions-main{display:flex;gap:7px;margin-left:auto}
+  .tour-actions .btn{min-height:34px}.tour-actions .btn:disabled{opacity:.4;cursor:not-allowed}
+  @media(prefers-reduced-motion:reduce){.tour-spotlight{transition:none}}
+  @media(max-width:680px){
+    .tour-card,.tour-card.centered{left:12px!important;right:12px!important;top:auto!important;bottom:12px!important;width:auto;max-height:min(55vh,440px);transform:none!important}
+    .tour-spotlight{border-radius:6px}
+    .tour-actions{align-items:flex-end}.tour-actions-main{flex-wrap:wrap;justify-content:flex-end}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>正EV交易决策台 · <span id="sym">—</span></h1>
-    <div class="sub">最新价 <b id="price">—</b> · 周期 <span id="tfLabel">4h</span> · 数据源 <span id="src">—</span> · <span id="gen">—</span></div>
-    <div class="status"><span class="dot load" id="sdot"></span><span id="stext">准备加载…</span></div>
+  <header class="desk-header">
+    <div>
+      <h1>正EV交易决策台 · <span id="sym">—</span></h1>
+      <div class="sub">最新价 <b id="price">—</b> · 周期 <span id="tfLabel">4h</span> · 数据源 <span id="src">—</span> · <span id="gen">—</span></div>
+      <div class="status"><span class="dot load" id="sdot"></span><span id="stext">准备加载…</span></div>
+    </div>
+    <button type="button" class="tour-launch" id="tourLaunch" onclick="startTour(true)" aria-label="重新查看使用教程" title="重新查看使用教程"><span class="tour-launch-mark" aria-hidden="true">?</span><span class="tour-launch-label">使用教程</span></button>
   </header>
 
   <div class="disclaimer">行情可能存在延迟；本面板为分析推演，<b>非投资建议</b>，执行与风控由你决定。 · <a href="tos.html" style="color:#e3c07a">服务条款与隐私</a> · <a href="index.html" style="color:#e3c07a">关于/首页</a></div>
@@ -297,7 +333,8 @@
   </nav>
 
   <div class="page on" id="pDesk">
-  <div class="ctrls">
+  <div id="deskOverview">
+  <div class="ctrls" id="deskControls">
     <select id="symsel">
       <option value="BTCUSDT">BTC/USDT</option>
       <option value="ETHUSDT">ETH/USDT</option>
@@ -345,6 +382,7 @@
   </div>
 
   <section id="marketContext" class="market-context" aria-live="polite"></section>
+  </div>
 
   <section class="decision-chart" aria-labelledby="chartTitle">
     <div class="chart-head"><div><div class="chart-title" id="chartTitle">价格与专家参考计划</div><div class="chart-sub" id="chartMeta">等待行情</div></div><div class="chart-plan" id="chartPlan">支撑阻力与计划价位将在同一张图显示</div></div>
@@ -417,6 +455,20 @@
 </div>
 
 <div class="modal" id="modal" onclick="if(event.target===this)closeDetail()"><div class="sheet"></div></div>
+
+<div class="tour-root" id="productTour" hidden>
+  <div class="tour-scrim" aria-hidden="true"></div>
+  <div class="tour-spotlight" id="tourSpotlight" aria-hidden="true" hidden></div>
+  <section class="tour-card centered" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourCopy">
+    <div class="tour-card-head"><span class="tour-kicker" id="tourStepLabel">EV Desk 使用教程</span><button type="button" class="tour-close" id="tourClose" aria-label="关闭教程" title="关闭教程">×</button></div>
+    <h2 class="tour-title" id="tourTitle" tabindex="-1"></h2>
+    <p class="tour-copy" id="tourCopy"></p>
+    <ul class="tour-points" id="tourPoints"></ul>
+    <div class="tour-progress" aria-hidden="true"><i id="tourProgress"></i></div>
+    <label class="tour-prefs"><input type="checkbox" id="tourNoAuto">以后不再自动弹出（仍可在顶部重看）</label>
+    <div class="tour-actions"><button type="button" class="btn" id="tourSkip">跳过</button><div class="tour-actions-main"><button type="button" class="btn" id="tourPrev">上一步</button><button type="button" class="btn primary" id="tourNext">下一步</button></div></div>
+  </section>
+</div>
 
 <script src="data/expert-evidence.js"></script>
 <script src="data/paul-wei-live.js"></script>
@@ -2272,6 +2324,72 @@ function showPage(p){
   const f=document.getElementById('deskFoot'); if(f)f.style.display=p==='desk'?'':'none';
   if(p==='radar'){renderRadar();if(!RADAR.length&&!scanning&&!radarAutoStarted){radarAutoStarted=true;setTimeout(scanRadar,60);}} if(p==='arena'){renderExpertArena();refreshRemoteArena();} if(p==='growth')renderGrowth(); if(p==='me')renderMe();
 }
+
+// ---- 首次使用教程 ----
+const TOUR_PREFS_KEY="evDeskProductTourV1";
+const TOUR_STEPS=[
+  {page:"desk",title:"先别急着看术语：这里只回答四个问题",copy:"EV Desk 不是喊单页面，也不会用一个分数承诺赚钱。它把一笔交易拆成可以检查、可以复盘的计划。",points:["市场现在是什么状态？","价格到哪里才允许行动？","判断错了在哪里退出？","这套方法过去是否经得住独立检验？"]},
+  {page:"desk",selector:".nav",title:"五个页面，就是一条完整工作流",copy:"从找机会、做计划，到检查教练和复盘自己，按从左到右的顺序使用即可。",points:["决策台：只研究一个市场的一笔计划","雷达：从自选池里找值得进一步看的标的","历史战绩：检查教练有没有证据和权限","成长 / 我的：记录自己的执行并管理设置"]},
+  {page:"desk",selector:"#deskOverview",title:"先选市场和周期，再确认数据能不能用",copy:"上面一行决定你在看什么；下面的数据状态告诉你这份判断基于哪批行情。",points:["前两个下拉框选择标的和 K 线周期","“延迟行情”只适合做计划，不应当作成交级实时报价","账户和单笔风险只影响仓位计算，不会改变方向判断"]},
+  {page:"desk",selector:".decision-chart",title:"K 线用来定位，不是用来猜涨跌",copy:"图上的线把专家计划落回真实价格，让你知道观点具体对应哪里。",points:["蜡烛和均线帮助辨认趋势、波动与位置","黄色、红色、绿色线分别对应参考进场、止损和目标","可拖动缩放，也可用工具画趋势线、水平线和复位"]},
+  {page:"desk",selector:"#pretradeMap",title:"把“我感觉”改写成可检查的计划",copy:"下单前地图把关键区域、备选路径和失效条件放在一起。",points:["左边看当前价格靠近哪一层支撑或阻力","右边比较主计划和备选计划的进场、止损、目标","没有到触发位置，或赔率不够，就继续等待"]},
+  {page:"desk",selector:"#evcard",title:"先读行动卡，再看下面的专家",copy:"这张卡是当前页面最重要的结论，优先告诉你现在该做什么，而不是堆术语。",points:["方向可能是做多、做空，也可能明确“不下单”","赔率、风险金额和仓位按你的账户设置计算","结论下方的多空刻度只是专家结构共识，不等于胜率"]},
+  {page:"desk",selector:"#grid .card",title:"每位教练只是一个观察角度",copy:"教练卡解释“为什么”，但没有任何一位专家可以绕过计划和风险纪律。",points:["卡片展示方向、理由、参考价位和当前可信度","点击卡片可查看历史证据、近期表现与适用范围","失败或证据不足的教练会被降权，不会被包装成信号"]},
+  {page:"radar",selector:".opp-hero",title:"雷达帮你排队，不替你预测",copy:"雷达扫描自选池，先把计划不完整的市场排到后面，减少到处追行情。",points:["机会分衡量位置、赔率、共识和证据完整度，不是胜率","A 到 D 表示当前计划成熟度，并配有下一步动作","“扫描自选”会重新检查；失败的数据源也会如实保留"]},
+  {page:"arena",selector:".arena-hero",title:"先看教练过去是否经得住考试",copy:"历史战绩页回答的不是“谁最会说”，而是谁在相同规则和成本下留下了可核验结果。",points:["看累计 R 曲线、最近结算、样本量和每笔期望","验证集与最终留出分开，避免拿答案反复调参数","只有通过门槛的教练进入计划席，失败证据不会删除"]},
+  {page:"growth",selector:"#growthBox",title:"真正需要持续优化的是你的执行",copy:"成长页把你记录的交易换算成统一的 R，避免被账户大小和单笔盈亏误导。",points:["交易结束后标记赢、输或平，形成个人曲线","重点看每笔期望、累计 R、止损率和合格赔率占比","数据只保存在当前设备，先从少量真实记录开始"]},
+  {page:"me",selector:"#meBox",title:"最后管理风险、扫描池和教程",copy:"这里集中放个人参数。教程结束后，顶部的问号按钮仍然可以随时重新打开。",points:["设置账户金额、单笔风险和雷达自选池","个人偏好与交易记录只保存在当前设备","可以勾选“以后不再自动弹出”，手动重看不受影响"]}
+];
+let tourState={active:false,index:0,target:null,returnPage:"desk",returnScroll:0,lastFocus:null};
+function getTourPrefs(){try{return Object.assign({completed:false,noAuto:false,lastStep:0},JSON.parse(localStorage.getItem(TOUR_PREFS_KEY)||"{}"));}catch(e){return{completed:false,noAuto:false,lastStep:0};}}
+function saveTourPrefs(next){try{localStorage.setItem(TOUR_PREFS_KEY,JSON.stringify(next));}catch(e){}return next;}
+function setTourNoAuto(value){const prefs=getTourPrefs();prefs.noAuto=!!value;saveTourPrefs(prefs);const checkbox=document.getElementById("tourNoAuto");if(checkbox)checkbox.checked=prefs.noAuto;}
+function activePageName(){const active=document.querySelector(".nav a.on");return active&&active.id?active.id.replace("nav-",""):"desk";}
+function tourTarget(){const step=TOUR_STEPS[tourState.index];return step&&step.selector?document.querySelector(step.selector):null;}
+function layoutTour(){
+  if(!tourState.active)return;
+  const root=document.getElementById("productTour"),card=document.getElementById("tourCard"),spot=document.getElementById("tourSpotlight"),target=tourTarget();tourState.target=target;
+  root.classList.toggle("has-target",!!target);spot.hidden=!target;card.classList.toggle("centered",!target);
+  card.style.left="";card.style.top="";card.style.right="";card.style.bottom="";card.style.transform="";
+  if(!target)return;
+  const vw=window.innerWidth,vh=window.innerHeight,pad=8,raw=target.getBoundingClientRect(),left=Math.max(8,raw.left-pad),top=Math.max(8,raw.top-pad),right=Math.min(vw-8,raw.right+pad),bottom=Math.min(vh-8,raw.bottom+pad);
+  spot.style.left=`${left}px`;spot.style.top=`${top}px`;spot.style.width=`${Math.max(28,right-left)}px`;spot.style.height=`${Math.max(28,bottom-top)}px`;
+  if(vw<=680)return;
+  const gap=14,cw=card.offsetWidth,ch=card.offsetHeight;let x=Math.max(12,Math.min(raw.left,vw-cw-12)),y;
+  if(raw.bottom+gap+ch<=vh-12)y=raw.bottom+gap;
+  else if(raw.top-gap-ch>=12)y=raw.top-gap-ch;
+  else if(raw.right+gap+cw<=vw-12){x=raw.right+gap;y=Math.max(12,Math.min(raw.top,vh-ch-12));}
+  else if(raw.left-gap-cw>=12){x=raw.left-gap-cw;y=Math.max(12,Math.min(raw.top,vh-ch-12));}
+  else y=Math.max(12,Math.min((vh-ch)/2,vh-ch-12));
+  card.style.left=`${x}px`;card.style.top=`${y}px`;
+}
+function renderTourStep(){
+  if(!tourState.active)return;
+  const step=TOUR_STEPS[tourState.index];if(step.page)showPage(step.page);
+  document.getElementById("tourStepLabel").textContent=`EV Desk 使用教程 · ${tourState.index+1}/${TOUR_STEPS.length}`;
+  document.getElementById("tourTitle").textContent=step.title;document.getElementById("tourCopy").textContent=step.copy;
+  document.getElementById("tourPoints").innerHTML=step.points.map(point=>`<li>${point}</li>`).join("");
+  document.getElementById("tourProgress").style.width=`${(tourState.index+1)/TOUR_STEPS.length*100}%`;
+  document.getElementById("tourPrev").disabled=tourState.index===0;document.getElementById("tourNext").textContent=tourState.index===TOUR_STEPS.length-1?"完成教程":"下一步";
+  const target=tourTarget(),behavior=window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth";
+  layoutTour();
+  if(target)target.scrollIntoView({behavior,block:window.innerWidth<=680?"start":"center",inline:"nearest"});
+  window.setTimeout(()=>{layoutTour();document.getElementById("tourTitle").focus({preventScroll:true});},behavior==="smooth"?360:20);
+}
+function startTour(manual){
+  if(tourState.active)return;tourState.active=true;tourState.index=0;tourState.returnPage=activePageName();tourState.returnScroll=window.scrollY;tourState.lastFocus=document.activeElement;
+  const root=document.getElementById("productTour");root.hidden=false;document.getElementById("tourNoAuto").checked=getTourPrefs().noAuto;renderTourStep();
+}
+function endTour(completed){
+  if(!tourState.active)return;const prefs=getTourPrefs();prefs.lastStep=tourState.index;if(completed)prefs.completed=true;saveTourPrefs(prefs);
+  if(!completed)try{sessionStorage.setItem("evDeskTourSkippedSession","1");}catch(e){}
+  document.getElementById("productTour").hidden=true;tourState.active=false;tourState.target=null;showPage(tourState.returnPage);
+  requestAnimationFrame(()=>window.scrollTo({top:tourState.returnScroll,behavior:"auto"}));if(tourState.lastFocus&&tourState.lastFocus.focus)tourState.lastFocus.focus({preventScroll:true});
+}
+function moveTour(delta){const next=tourState.index+delta;if(next>=TOUR_STEPS.length){endTour(true);return;}tourState.index=Math.max(0,next);renderTourStep();}
+function maybeStartTour(){const prefs=getTourPrefs();let skipped=false;try{skipped=sessionStorage.getItem("evDeskTourSkippedSession")==="1";}catch(e){}if(!prefs.completed&&!prefs.noAuto&&!skipped)setTimeout(()=>startTour(false),650);}
+document.getElementById("tourClose").onclick=()=>endTour(false);document.getElementById("tourSkip").onclick=()=>endTour(false);document.getElementById("tourPrev").onclick=()=>moveTour(-1);document.getElementById("tourNext").onclick=()=>moveTour(1);document.getElementById("tourNoAuto").onchange=event=>setTourNoAuto(event.target.checked);
+window.addEventListener("resize",layoutTour);window.addEventListener("scroll",layoutTour,{passive:true});document.addEventListener("keydown",event=>{if(!tourState.active)return;if(event.key==="Escape")endTour(false);if(event.key==="ArrowLeft")moveTour(-1);if(event.key==="ArrowRight")moveTour(1);});
 // ---- 自选 & 雷达 ----
 const RADAR_ALLOWED=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","TONUSDT","AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AMD","AVGO","MU","SPY","QQQ","NDX","NQ","XAUUSD","WTI"];
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","NQ","QQQ","NVDA","TSLA","SPY","XAUUSD"];
@@ -2398,7 +2516,7 @@ function renderGrowth(){
    <div class="demoflag" style="margin-top:12px">这是你亲手记录的真实交易战绩（本地保存）。真实、可追溯——比任何回测都有说服力。</div>`;
 }
 function renderMe(){
-  const box=document.getElementById('meBox'),j=getJournal();
+  const box=document.getElementById('meBox'),j=getJournal(),tourPrefs=getTourPrefs();
   box.innerHTML=`
    <div class="mrow"><span>单笔风险 %</span><input type="number" value="${document.getElementById('riskpct').value}" style="width:60px" onchange="document.getElementById('riskpct').value=this.value;recompute()"></div>
    <div class="mrow"><span>账户 $</span><input type="number" value="${document.getElementById('acct').value}" style="width:96px" onchange="document.getElementById('acct').value=this.value;recompute()"></div>
@@ -2406,13 +2524,15 @@ function renderMe(){
    <div class="mrow"><span>编辑自选</span><input value="${getWatch().join(',')}" style="width:210px" onchange="setWatch(this.value.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean));renderMe()"></div>
    <div class="mrow"><span>已记录交易</span><span>${j.length} 笔 <button class="btn" onclick="if(confirm('清空全部交易记录?')){setJournal([]);renderMe();}">清空</button></span></div>
    <div class="mrow"><span>高手偏好</span><button class="btn" onclick="clearSaved()">清除并重置</button></div>
+   <div class="mrow"><span><b>使用教程</b><span class="rmini" style="display:block">${tourPrefs.completed?'已完成，可随时重看':'尚未完整看完'}</span></span><button class="btn" onclick="startTour(true)">重新查看</button></div>
+   <div class="mrow"><span>教程偏好</span><label class="chk"><input type="checkbox" ${tourPrefs.noAuto?'checked':''} onchange="setTourNoAuto(this.checked);renderMe()"> 以后不再自动弹出</label></div>
    <div class="evidence-line" style="margin-top:12px">个人偏好和交易记录仅保存在当前设备。</div>`;
 }
 document.getElementById("scanBtn").onclick=scanRadar;
 
 /* 启动 */
 window.addEventListener("ev-desk-coach-engine-ready",()=>{if(CARDS.length)recompute();});
-reload();
+reload().finally(maybeStartTour);
 </script>
 </body>
 </html>

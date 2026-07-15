@@ -22,6 +22,24 @@ test("decision desk ships an interactive candlestick chart, plan overlays and dr
 });
 
 
+test("first-visit tutorial explains every workspace and remains manually replayable", async () => {
+  const html = await readFile(appPath, "utf8");
+  assert.match(html, /id="tourLaunch"/);
+  assert.match(html, /id="productTour" hidden/);
+  assert.match(html, /aria-modal="true"/);
+  assert.match(html, /const TOUR_STEPS=\[/);
+  assert.match(html, /selector:"\.decision-chart"/);
+  assert.match(html, /selector:"\.opp-hero"/);
+  assert.match(html, /selector:"\.arena-hero"/);
+  assert.match(html, /selector:"#growthBox"/);
+  assert.match(html, /selector:"#meBox"/);
+  assert.match(html, /evDeskProductTourV1/);
+  assert.match(html, /以后不再自动弹出/);
+  assert.match(html, /onclick="startTour\(true\)"/);
+  assert.match(html, /reload\(\)\.finally\(maybeStartTour\)/);
+});
+
+
 test("radar scans a cross-asset watchlist and exposes trigger filters", async () => {
   const html = await readFile(appPath, "utf8");
   assert.match(html, /data-filter="ready"/);
