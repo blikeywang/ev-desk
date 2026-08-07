@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {oppositeDirection,simulateScope,simulateScopeVariants,summarizeTrades} from "../scripts/build-evidence.mjs";
+import {oppositeDirection,roundTripCostR,simulateScope,simulateScopeVariants,summarizeTrades} from "../scripts/build-evidence.mjs";
 
 function candles(n=420){
   const out=[];for(let i=0;i<n;i++){const wave=Math.sin(i/18)*28,trend=i*.15,base=1000+wave+trend,o=base-Math.sin(i)*3,c=base+Math.cos(i/3)*4,h=Math.max(o,c)+9,l=Math.min(o,c)-9,v=1000+(i%23===0?1500:0);out.push([1700000000+i*3600,o,h,l,c,v]);}return out;
@@ -20,6 +20,12 @@ test("counter simulator rebuilds a real opposite-direction structural plan",()=>
   assert.ok(rows.every(row=>row.direction===oppositeDirection(row.source_direction)));
   assert.ok(rows.every(row=>row.opened_bar_ts>row.signal_bar_ts));
   assert.ok(rows.every(row=>row.direction==="long"?row.stop<row.entry&&row.target>row.entry:row.stop>row.entry&&row.target<row.entry));
+});
+
+test("futures friction is converted from contract points into plan R",()=>{
+  assert.equal(roundTripCostR(20000,19980,{type:"fixed_points",round_trip_points:.75}),.0375);
+  assert.equal(roundTripCostR(6000,5995,{type:"fixed_points",round_trip_points:.60}),.12);
+  assert.equal(roundTripCostR(1000,990),.1);
 });
 
 test("evidence summary exposes uncertainty and drawdown",()=>{

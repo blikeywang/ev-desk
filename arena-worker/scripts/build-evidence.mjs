@@ -57,8 +57,15 @@ export async function downloadFunding(symbol,startMs,endMs){
   return [...new Map(rows.map(r=>[r[0],r])).values()].sort((a,b)=>a[0]-b[0]);
 }
 
+export function roundTripCostR(entry,stop,costModel=null){
+  const risk=Math.abs(entry-stop)||1;
+  if(costModel&&costModel.type==="fixed_points"&&Number.isFinite(+costModel.round_trip_points))return Math.max(0,+costModel.round_trip_points)/risk;
+  const rate=costModel&&Number.isFinite(+costModel.round_trip_rate)?Math.max(0,+costModel.round_trip_rate):.001;
+  return Math.abs(entry)*rate/risk;
+}
+
 function settle(state,bar,grossR,reason,exit){
-  const risk=Math.abs(state.entry-state.stop)||1,costR=state.entry*.001/risk;
+  const costR=roundTripCostR(state.entry,state.stop,state.cost_model);
   return{expert_id:state.expert_id,symbol:state.symbol,timeframe:state.timeframe,direction:state.direction,source_direction:state.source_direction,strategy_variant:state.strategy_variant,regime:state.regime,signal_bar_ts:state.signal_bar_ts,opened_bar_ts:state.entry_bar_ts||bar[0],closed_bar_ts:bar[0],entry:state.entry,exit,stop:state.stop,target:state.target,rr:state.rr,gross_r:grossR,cost_r:costR,net_r:grossR-costR,close_reason:reason,model_version:state.model_version};
 }
 
@@ -81,7 +88,7 @@ function advance(state,bar){
 export function oppositeDirection(direction){return direction==="long"?"short":direction==="short"?"long":null;}
 
 export function simulateScopeVariants(candles,fundingRows=[],scope={symbol:"TESTUSDT",timeframe:"1h"},options={}){
-  const includeStandard=options.includeStandard!==false,includeCounter=options.includeCounter===true,states={standard:{},counter:{}},trades={standard:[],counter:[]},funding=[...fundingRows].sort((a,b)=>a[0]-b[0]);let fundingIndex=-1,currentFunding=null;
+  const includeStandard=options.includeStandard!==false,includeCounter=options.includeCounter===true,costModel=options.costModel||scope.cost_model||null,states={standard:{},counter:{}},trades={standard:[],counter:[]},funding=[...fundingRows].sort((a,b)=>a[0]-b[0]);let fundingIndex=-1,currentFunding=null;
   for(let i=80;i<candles.length;i++){
     const bar=candles[i];while(fundingIndex+1<funding.length&&funding[fundingIndex+1][0]<=bar[0])currentFunding=funding[++fundingIndex][1];
     for(const variant of ["standard","counter"]){
@@ -93,12 +100,12 @@ export function simulateScopeVariants(candles,fundingRows=[],scope={symbol:"TEST
     const counterPlans={};
     for(const x of analysis){
       if(!x.direction||!x.plan||x.plan.rr<1)continue;
-      if(includeStandard&&!states.standard[x.id])states.standard[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction:x.direction,regime:x.regime,signal_bar_ts:bar[0],entry:x.plan.entry,stop:x.plan.stop,target:x.plan.target,rr:x.plan.rr,model_version:x.version,status:"pending",age:0,held:0};
+      if(includeStandard&&!states.standard[x.id])states.standard[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction:x.direction,regime:x.regime,signal_bar_ts:bar[0],entry:x.plan.entry,stop:x.plan.stop,target:x.plan.target,rr:x.plan.rr,model_version:x.version,cost_model:costModel,status:"pending",age:0,held:0};
       if(!includeCounter||states.counter[x.id])continue;
       const direction=oppositeDirection(x.direction);if(!direction)continue;
       if(counterPlans[direction]===undefined)counterPlans[direction]=buildPlan(direction,window);
       const plan=counterPlans[direction];if(!plan||plan.rr<1)continue;
-      states.counter[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction,source_direction:x.direction,strategy_variant:"counter_structural_v1",regime:x.regime,signal_bar_ts:bar[0],entry:plan.entry,stop:plan.stop,target:plan.target,rr:plan.rr,model_version:`counter-structural-v1:${x.version}`,status:"pending",age:0,held:0};
+      states.counter[x.id]={expert_id:x.id,symbol:scope.symbol,timeframe:scope.timeframe,direction,source_direction:x.direction,strategy_variant:"counter_structural_v1",regime:x.regime,signal_bar_ts:bar[0],entry:plan.entry,stop:plan.stop,target:plan.target,rr:plan.rr,model_version:`counter-structural-v1:${x.version}`,cost_model:costModel,status:"pending",age:0,held:0};
     }
   }
   return trades;

@@ -11,7 +11,8 @@
     "db:remote": "wrangler d1 execute ev-desk-arena --remote --file=schema.sql",
     "evidence": "node scripts/build-evidence.mjs",
     "evidence:quick": "node scripts/build-evidence.mjs --quick",
-    "coach:training": "node scripts/build-coach-training.mjs"
+    "coach:training": "node scripts/build-coach-training.mjs",
+    "coach:index-competition": "node scripts/build-index-competition.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.24.3"

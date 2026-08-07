@@ -68,6 +68,12 @@ test("coach history renders curves, recent settlements and evidence levels", asy
   assert.match(html, /反向结果单独记账，不替代原专家战绩/);
   assert.match(html, /只否决，不发单/);
   assert.match(html, /当前范围未获授权/);
+  assert.match(html, /data\/index-coach-competition\.js/);
+  assert.match(html, /function renderIndexCompetition\(\)/);
+  assert.match(html, /function openIndexCompetition\(id\)/);
+  assert.match(html, /NQ \/ ES 过去一年赛/);
+  assert.match(html, /验证与留出没有同时过线就不增加下单权/);
+  assert.match(html, /范围等权EV与把所有高低周期交易相加的累计R可能方向不同/);
 });
 
 
