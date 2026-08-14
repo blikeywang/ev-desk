@@ -90,8 +90,28 @@ test("NQ and US-stock intraday coverage keeps exact evidence boundaries", async 
 });
 
 
+test("personal data hub is auto-discovered and ES is available", async () => {
+  const html = await readFile(appPath, "utf8");
+  const config = await readFile(new URL("../../config.js", import.meta.url), "utf8");
+  assert.match(config, /personalDataApi/);
+  assert.match(config, /127\.0\.0\.1:8765/);
+  assert.match(html, /function marketApiBases\(\)/);
+  assert.match(html, /function probePersonalHub\(deep=false\)/);
+  assert.match(html, /function openIbkrWebLogin\(\)/);
+  assert.match(html, /\u767b\u5f55 IBKR/);
+  assert.match(html, /function sanitizeCandles\(rows\)/);
+  assert.match(html, /value="ES"/);
+  assert.match(html, /"ES":"ES=F"/);
+  assert.match(html, /id="customSymbol"/);
+  assert.match(html, /function prewarmRadarData\(symbols\)/);
+  assert.match(html, /failureKey=`\$\{base\}\|\$\{sym\}`/);
+  assert.match(html, /"NQ","ES","XAUUSD"/);
+  assert.match(html, /个人数据中枢/);
+});
+
+
 test("every selectable US market has a deployable fallback snapshot", async () => {
-  const symbols = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "AMD", "AVGO", "MU", "SPY", "QQQ", "NDX", "NQ"];
+  const symbols = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "AMD", "AVGO", "MU", "SPY", "QQQ", "NDX", "NQ", "ES"];
   for (const symbol of symbols) {
     const url = new URL(`../../data/market-snapshots/${symbol}.json`, import.meta.url);
     const payload = JSON.parse(await readFile(url, "utf8"));
@@ -99,6 +119,16 @@ test("every selectable US market has a deployable fallback snapshot", async () =
     assert.equal(payload.symbol, symbol);
     for (const timeframe of ["1m", "5m", "15m", "1h", "4h", "1d"]) {
       assert.ok(payload.data[timeframe].length >= 80, `${symbol} ${timeframe} fallback is incomplete`);
+      const valid = payload.data[timeframe].filter((row) => {
+        if (!Array.isArray(row) || row.length < 5) return false;
+        const [timestamp, open, high, low, close] = row.map(Number);
+        return [timestamp, open, high, low, close].every(Number.isFinite)
+          && timestamp > 0
+          && Math.min(open, high, low, close) > 0
+          && high >= Math.max(open, close, low)
+          && low <= Math.min(open, close, high);
+      });
+      assert.ok(valid.length >= 70, `${symbol} ${timeframe} has too few valid OHLC rows after sanitizing`);
     }
   }
 });

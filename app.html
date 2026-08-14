@@ -33,6 +33,7 @@
     padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px}
   .btn:hover,select:hover{border-color:var(--accent)}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .symbol-direct{display:flex;align-items:center;gap:0}.symbol-direct input{width:124px;min-height:31px;box-sizing:border-box;background:var(--panel2);border:1px solid var(--border);border-right:0;border-radius:8px 0 0 8px;color:var(--txt);padding:6px 9px;font-size:12.5px;text-transform:uppercase}.symbol-direct .btn{min-width:34px;border-radius:0 8px 8px 0;padding-inline:9px}
   label.chk{font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
   .levels{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--muted);
     background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:6px 0}
@@ -379,12 +380,14 @@
         <option value="QQQ">QQQ</option>
         <option value="NDX">US Tech 100 · Nasdaq-100</option>
         <option value="NQ">NQ / MNQ · Nasdaq-100 期货</option>
+        <option value="ES">ES / MES · S&amp;P 500 期货</option>
       </optgroup>
       <optgroup label="大宗商品">
         <option value="XAUUSD">黄金 GC=F</option>
         <option value="WTI">原油 CL=F</option>
       </optgroup>
     </select>
+    <div class="symbol-direct"><input id="customSymbol" type="text" maxlength="24" autocomplete="off" spellcheck="false" aria-label="直接输入市场代码" placeholder="700.HK / AAPL"><button class="btn" id="openCustomSymbol" type="button" aria-label="打开输入的市场" title="打开输入的市场">⌕</button></div>
     <select id="tfsel" title="交易周期(专家随之重算)">
       <option value="1m">1m</option><option value="5m">5m</option>
       <option value="15m">15m</option><option value="1h">1h</option>
@@ -923,7 +926,7 @@ const INTRADAY_EXPERTS=Object.fromEntries(Object.entries(INTRADAY_TRAINING&&INTR
   return[id,{...coach,intraday:true,aggregate_holdout:{status:supported?"supported":"downweight",scopes:1,n:holdout.n||0,scope_weighted_ev:holdout.ev,scope_weighted_gross_ev:holdout.gross_ev,scope_weighted_cost_r:holdout.avg_cost_r,positive_scope_pct:holdout.ev>0?100:0,prior_multiplier:supported?1.02:0.98},scopes:{"NQ|1m":{development:coach.development,validation:coach.validation,holdout:coach.holdout}}}];
 }));
 function symKey(s){return String(s).replace("USDT","").replace("USD","");}
-const SYMBOL_LABELS={NDX:"US Tech 100",NQ:"NQ / MNQ",XAUUSD:"黄金",WTI:"原油"};
+const SYMBOL_LABELS={NDX:"US Tech 100",NQ:"NQ / MNQ",ES:"ES / MES",XAUUSD:"黄金",WTI:"原油"};
 function symbolLabel(s){return SYMBOL_LABELS[s]||String(s).replace("USDT","/USDT");}
 /* ============ 工具 & 指标 ============ */
 const fmt=n=>{if(n==null||isNaN(n))return"—";const x=Math.abs(Number(n)),d=x<1?6:x<100?4:x<1000?2:0;
@@ -974,22 +977,46 @@ function okxSwap(sym){return sym.replace("USDT","-USDT-SWAP");}
 async function jget(url,ms=9000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
   try{const r=await fetch(url,{signal:c.signal});if(!r.ok)throw new Error(r.status);return await r.json();}
   finally{clearTimeout(t);} }
+function sanitizeCandles(rows){
+  const clean=new Map();
+  for(const row of Array.isArray(rows)?rows:[]){
+    if(!Array.isArray(row)||row.length<5)continue;
+    const ts=+row[0],open=+row[1],high=+row[2],low=+row[3],close=+row[4],rawVolume=+row[5];
+    if(![ts,open,high,low,close].every(Number.isFinite)||ts<=0||Math.min(open,high,low,close)<=0)continue;
+    if(high<Math.max(open,close,low)||low>Math.min(open,close,high))continue;
+    clean.set(ts,[ts,open,high,low,close,Number.isFinite(rawVolume)&&rawVolume>=0?rawVolume:0]);
+  }
+  return [...clean.values()].sort((a,b)=>a[0]-b[0]);
+}
 let LIVE_CONTEXT={derivatives:null,macro:null,generatedAt:null,mode:"browser"};
-function marketApiBase(){const c=window.EV_DESK_CONFIG||{};return String(c.marketApi||c.arenaApi||"").replace(/\/$/,"");}
+let PERSONAL_HUB_STATUS={state:"unknown",message:"尚未检测",providers:null,checkedAt:0};
+const API_FAILURE_UNTIL=new Map();
+function personalDataApiBase(){const c=window.EV_DESK_CONFIG||{};return String(c.personalDataApi||"http://127.0.0.1:8765").replace(/\/$/,"");}
+function marketApiBases(){const c=window.EV_DESK_CONFIG||{},items=[...(Array.isArray(c.marketApis)?c.marketApis:[]),c.marketApi,c.arenaApi,c.personalDataApi];return[...new Set(items.map(x=>String(x||"").replace(/\/$/,"")).filter(Boolean))];}
+function marketApiBase(){return marketApiBases()[0]||"";}
+function isPersonalApi(base){return /:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(base);}
 async function fromUnifiedMarket(sym){
-  const base=marketApiBase();if(!base)throw new Error("unified market API not configured");
-  const sl=slots(),wanted=[...new Set(Object.values(sl))],d=await jget(`${base}/api/v1/market/bundle?symbol=${encodeURIComponent(sym)}&timeframes=${encodeURIComponent(wanted.join(','))}`,18000),out={};
-  for(const slot in sl){const item=d.data&&d.data[sl[slot]];if(!item||!Array.isArray(item.candles)||item.candles.length<70)throw new Error(`统一行情缺少 ${sl[slot]}`);out[slot]=item.candles;}
-  LIVE_CONTEXT={derivatives:d.derivatives||null,macro:d.macro||null,generatedAt:d.generated_at||Date.now(),mode:"server"};
-  const sources=[...new Set(Object.values(d.data||{}).map(x=>x.source).filter(Boolean))];
-  return {name:`统一行情 · ${sources.join('/')||'公开源'}`,data:out,context:d};
+  const bases=marketApiBases();if(!bases.length)throw new Error("unified market API not configured");
+  const sl=slots(),wanted=[...new Set(Object.values(sl))];let last;
+  for(const base of bases){
+    const failureKey=`${base}|${sym}`;if((API_FAILURE_UNTIL.get(failureKey)||0)>Date.now())continue;
+    try{
+      const d=await jget(`${base}/api/v1/market/bundle?symbol=${encodeURIComponent(sym)}&timeframes=${encodeURIComponent(wanted.join(','))}`,isPersonalApi(base)?15000:18000),out={};
+      for(const slot in sl){const item=d.data&&d.data[sl[slot]],rows=sanitizeCandles(item&&item.candles);if(rows.length<70)throw new Error(`统一行情缺少 ${sl[slot]}`);out[slot]=rows;}
+      const personal=isPersonalApi(base),sources=[...new Set(Object.values(d.data||{}).map(x=>x.source).filter(Boolean))];
+      LIVE_CONTEXT={derivatives:d.derivatives||null,macro:d.macro||null,market:d.market||{},generatedAt:d.generated_at||Date.now(),mode:personal?"personal":"server",apiBase:base,provider:d.provider||sources[0]||null,providerAttempts:d.provider_attempts||[]};
+      if(personal)PERSONAL_HUB_STATUS={state:"online",message:`已连接 · ${d.provider||sources.join('/')||'个人数据中枢'}`,providers:null,checkedAt:Date.now()};
+      return {name:`${personal?'个人数据中枢':'统一行情'} · ${sources.join('/')||d.provider||'公开源'}`,data:out,context:d};
+    }catch(e){last=e;API_FAILURE_UNTIL.set(failureKey,Date.now()+(isPersonalApi(base)?15000:5000));if(isPersonalApi(base))PERSONAL_HUB_STATUS={state:"degraded",message:`${symbolLabel(sym)} 暂无本机源，其他品种继续使用个人数据`,providers:null,checkedAt:Date.now()};}
+  }
+  throw last||new Error("统一行情暂不可用");
 }
 
 async function fromBinance(sym){
   const out={};const sl=slots();
   for(const tf in sl){
     const d=await jget(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${BINANCE_IV[sl[tf]]}&limit=200`);
-    out[tf]=d.map(r=>[r[0]/1000,+r[1],+r[2],+r[3],+r[4],+r[5]]);
+    out[tf]=sanitizeCandles(d.map(r=>[r[0]/1000,+r[1],+r[2],+r[3],+r[4],+r[5]]));
   }
   return out;
 }
@@ -998,7 +1025,7 @@ async function fromOKX(sym){
   for(const tf in sl){
     const d=await jget(`https://www.okx.com/api/v5/market/candles?instId=${inst}&bar=${OKX_IV[sl[tf]]}&limit=200`);
     if(!d.data||!d.data.length)throw new Error("okx empty");
-    out[tf]=d.data.map(r=>[+r[0]/1000,+r[1],+r[2],+r[3],+r[4],+r[5]]).reverse();
+    out[tf]=sanitizeCandles(d.data.map(r=>[+r[0]/1000,+r[1],+r[2],+r[3],+r[4],+r[5]]));
   }
   return out;
 }
@@ -1008,15 +1035,15 @@ async function fromKraken(sym){
   for(const tf in sl){
     const d=await jget(`https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=${KRAKEN_IV[sl[tf]]}`);
     const key=Object.keys(d.result).find(k=>k!=="last");
-    out[tf]=d.result[key].slice(-200).map(r=>[+r[0],+r[1],+r[2],+r[3],+r[4],+r[6]]);
+    out[tf]=sanitizeCandles(d.result[key].slice(-200).map(r=>[+r[0],+r[1],+r[2],+r[3],+r[4],+r[6]]));
   }
   return out;
 }
 // ---- 美股、指数与大宗商品延迟行情 ----
 const isCrypto=s=>/USDT$/.test(s);
 const US_EQUITY_SYMBOLS=new Set(["AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AMD","AVGO","MU","SPY","QQQ"]);
-const US_INTRADAY_SYMBOLS=new Set([...US_EQUITY_SYMBOLS,"NDX","NQ"]);
-const YTICK={"NDX":"^NDX","NQ":"NQ=F","XAUUSD":"GC=F","WTI":"CL=F"};
+const US_INTRADAY_SYMBOLS=new Set([...US_EQUITY_SYMBOLS,"NDX","NQ","ES"]);
+const YTICK={"NDX":"^NDX","NQ":"NQ=F","ES":"ES=F","XAUUSD":"GC=F","WTI":"CL=F"};
 const YMAP={"1m":["1m","5d"],"5m":["5m","1mo"],"15m":["15m","1mo"],"1h":["60m","3mo"],"4h":["60m","3mo"],"1d":["1d","2y"]};
 const MARKET_SNAPSHOT_BASE="https://raw.githubusercontent.com/blikeywang/ev-desk/market-data/market";
 function aggregateYahoo4h(rows,offsetSec=0){
@@ -1032,7 +1059,7 @@ function parseYahooChart(payload,targetTf){
   const q=r.indicators&&r.indicators.quote&&r.indicators.quote[0],rows=[],sourceSec=targetTf==="1d"?86400:(targetTf==="4h"||targetTf==="1h")?3600:TF_SECONDS[targetTf],now=Math.floor(Date.now()/1000);if(!q)throw new Error("行情结构不完整");
   const isIndex=r.meta&&r.meta.instrumentType==="INDEX";
   for(let i=0;i<r.timestamp.length;i++){const close=+q.close[i],ts=+r.timestamp[i];if(!Number.isFinite(close)||!Number.isFinite(ts)||ts+sourceSec>now)continue;const open=Number.isFinite(+q.open[i])?+q.open[i]:close,high=Number.isFinite(+q.high[i])?+q.high[i]:close,low=Number.isFinite(+q.low[i])?+q.low[i]:close,volume=isIndex?0:Number.isFinite(+q.volume[i])?+q.volume[i]:0;rows.push([ts,open,high,low,close,volume]);}
-  const candles=targetTf==="4h"?aggregateYahoo4h(rows,+(r.meta&&r.meta.gmtoffset)||0):rows;
+  const candles=sanitizeCandles(targetTf==="4h"?aggregateYahoo4h(sanitizeCandles(rows),+(r.meta&&r.meta.gmtoffset)||0):rows);
   return{candles:candles.slice(-400),meta:r.meta||{}};
 }
 async function yahooChart(ticker,interval,range){
@@ -1052,14 +1079,14 @@ async function fromYahoo(sym){
 async function fromMarketSnapshot(sym){
   const stamp=Math.floor(Date.now()/300000),urls=[`${MARKET_SNAPSHOT_BASE}/${sym}.json?v=${stamp}`,`data/market-snapshots/${sym}.json?v=20260714-3`];let last;
   for(const url of urls){try{const snapshot=await jget(url,14000),sl=slots(),out={};if(snapshot?.schema!=="ev_desk_market_snapshot_v1"||snapshot.symbol!==sym)throw new Error("快照格式不匹配");
-      for(const slot in sl){const rows=snapshot.data&&snapshot.data[sl[slot]];if(!Array.isArray(rows)||rows.length<70)throw new Error(`快照缺少 ${sl[slot]}`);out[slot]=rows;}
+      for(const slot in sl){const rows=sanitizeCandles(snapshot.data&&snapshot.data[sl[slot]]);if(rows.length<70)throw new Error(`快照缺少 ${sl[slot]}`);out[slot]=rows;}
       LIVE_CONTEXT={derivatives:null,macro:null,generatedAt:Date.parse(snapshot.generatedAt)||Date.now(),mode:"delayed",market:{...(snapshot.market||{}),source:snapshot.source||"延迟行情快照"}};
       return out;
     }catch(error){last=error;}}
   throw last||new Error("延迟行情快照不可用");
 }
 async function getOHLC(sym){
-  if(marketApiBase()){
+  if(marketApiBases().length){
     try{return await fromUnifiedMarket(sym);}catch(e){LIVE_CONTEXT={derivatives:null,macro:null,generatedAt:null,mode:"browser",fallbackReason:e&&e.message||String(e)};}
   }
   if(!isCrypto(sym)){
@@ -1525,7 +1552,7 @@ const gateClip=(value,low,high)=>Math.max(low,Math.min(high,Number.isFinite(valu
 const gateAvg=values=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:0;
 function gateStd(values){const mean=gateAvg(values);return Math.sqrt(gateAvg(values.map(value=>(value-mean)**2)));}
 function closedPrimaryCandles(){
-  let candles=((window.DALL&&window.DALL["4h"])||[]).map(row=>row.map(Number)).filter(row=>row.length>=6&&row.every(Number.isFinite));
+  let candles=sanitizeCandles((window.DALL&&window.DALL["4h"])||[]);
   const seconds=TF_SECONDS[slots()["4h"]]||3600;
   if(candles.length&&candles.at(-1)[0]+seconds>Date.now()/1000)candles=candles.slice(0,-1);
   return candles.slice(-260);
@@ -1607,12 +1634,12 @@ function contextCell(key,value,sub=""){return `<div class="context-cell"><span c
 function macroLabel(m){if(!m||!m.available)return["未启用",m&&m.reason||"需统一数据服务 + FRED"];
   let score=0,n=0;if(Number.isFinite(m.dollarChange5d)){n++;score+=m.dollarChange5d<=-.005?1:m.dollarChange5d>=.005?-1:0;}if(Number.isFinite(m.realYieldChange5d)){n++;score+=m.realYieldChange5d<=-.1?1:m.realYieldChange5d>=.1?-1:0;}if(Number.isFinite(m.vixChange5d)){n++;score+=m.vixChange5d<=-.1?.5:m.vixChange5d>=.1?-.5:0;}if(Number.isFinite(m.fedBalanceChange4w)){n++;score+=m.fedBalanceChange4w>0?.5:m.fedBalanceChange4w<0?-.5:0;}
   return[n<2?"输入不足":score>=1.5?"风险环境偏宽松":score<=-1.5?"风险环境偏收紧":"宏观信号混合",`FRED · ${m.asOf||"时点未知"}`];}
-function marketStateLabel(state){return({REGULAR:"交易中",PRE:"盘前",POST:"盘后",CLOSED:"已收盘"})[state]||"延迟行情";}
+function marketStateLabel(state){return({REGULAR:"交易中",NORMAL:"交易中",TRADING:"交易中",CONNECTED:"已连接",PRE:"盘前",POST:"盘后",CLOSED:"已收盘"})[String(state||"").toUpperCase()]||(LIVE_CONTEXT.mode==="personal"?"已连接":"延迟行情");}
 function renderMarketContext(){const box=document.getElementById("marketContext"),main=window.DALL&&window.DALL["4h"],bar=main&&main.at(-1),barTime=bar?new Date(bar[0]*1000).toLocaleString():"—";
   if(!isCrypto(curSym)){const market=LIVE_CONTEXT.market||{},change=Number.isFinite(market.change)?`${market.change>=0?"+":""}${(market.change*100).toFixed(2)}%`:"—",cells=[contextCell("行情状态",marketStateLabel(market.state),window.CURSRC||"延迟行情"),contextCell("最近K线",barTime,`${curTF} 视图 · ${main&&main.length||0}根`),contextCell("当日变化",change,market.exchange||symbolLabel(curSym)),contextCell("最新价",fmt(market.price||bar&&bar[4]),market.asOf?new Date(market.asOf).toLocaleTimeString():"行情延迟")],session=sessionCoachContext();
     if(curTF==="1m"&&US_INTRADAY_SYMBOLS.has(curSym)){if(session&&session.available){cells.push(contextCell("美东正盘",session.phase,`${session.sessionDay} · ${session.sessionRows} 根`));cells.push(contextCell("30m 开盘区间",`${fmt(session.openingLow)}–${fmt(session.openingHigh)}`,`确认阈值 ${fmt(session.lower)} / ${fmt(session.upper)}`));cells.push(contextCell("RTH VWAP",fmt(session.vwap),Number.isFinite(session.vwap)?session.price>session.vwap?"价格在均价上方":"价格在均价下方":"当前指数源没有成交量"));const signal=session.signal,permission=curSym==="NQ"?"NQ 样本外计划席":"个股迁移观察";cells.push(contextCell("开盘教练",signal?`${signal.direction==="long"?"多":"空"}头${signal.missed?"已错过":"刚触发"}`:"等待首次突破",signal?`进 ${fmt(signal.entry)} · 损 ${fmt(signal.stop)} · 目标 ${fmt(signal.target)} · ${permission}`:permission));}else cells.push(contextCell("美东正盘",session&&session.phase||"等待 09:30 ET","日内教练只读取 1 分钟闭合 K 线"));}
     box.className="market-context market-noncrypto";box.innerHTML=cells.join("");return;}
-  const d=LIVE_CONTEXT.derivatives&&LIVE_CONTEXT.derivatives.available?LIVE_CONTEXT.derivatives:(FUND||{}),cells=[contextCell("行情状态",LIVE_CONTEXT.mode==="server"?"已连接":"实时",window.CURSRC||"行情"),contextCell("最近K线",barTime,`${curTF} 视图 · ${main&&main.length||0}根`)];
+  const d=LIVE_CONTEXT.derivatives&&LIVE_CONTEXT.derivatives.available?LIVE_CONTEXT.derivatives:(FUND||{}),cells=[contextCell("行情状态",["server","personal"].includes(LIVE_CONTEXT.mode)?"已连接":"实时",window.CURSRC||"行情"),contextCell("最近K线",barTime,`${curTF} 视图 · ${main&&main.length||0}根`)];
   if(Number.isFinite(d.priceChange24h))cells.push(contextCell("24H价格",`${d.priceChange24h>=0?"+":""}${(d.priceChange24h*100).toFixed(2)}%`,d.source||d.src||"现货行情"));
   if(FUND&&Number.isFinite(FUND.rate))cells.push(contextCell("资金费率",`${(FUND.rate*100).toFixed(4)}% / 8h`,FUND.src));
   if(Number.isFinite(d.openInterestUsd)){const oiSub=Number.isFinite(d.openInterestChange24h)?`24H ${d.openInterestChange24h>=0?"+":""}${(d.openInterestChange24h*100).toFixed(1)}%`:"当前合约价值";cells.push(contextCell("未平仓价值",`$${compactMoney(d.openInterestUsd)}`,oiSub));}
@@ -2230,7 +2257,8 @@ async function refresh(){
     if(arenaApiBase())refreshRemoteArena();
     document.getElementById("wsControl").style.display=isCrypto(curSym)?"":"none";
     document.getElementById("tfLabel").textContent=curTF;
-    setStatus("ok",isCrypto(symbol)?`数据就绪 · ${timeframe} · ${ohlc.name}`+(fund?` · 费率@${fund.src}`:""):`数据就绪 · ${timeframe} · 延迟行情`);
+    const freshness=LIVE_CONTEXT.mode==="personal"?"个人实时源":LIVE_CONTEXT.mode==="server"?"联网数据服务":"延迟行情";
+    setStatus("ok",`数据就绪 · ${timeframe} · ${freshness} · ${ohlc.name}`+(fund?` · 费率@${fund.src}`:""));
   }catch(e){
     if(generation!==refreshGeneration)return;renderMarketContext();setStatus("bad","行情获取失败："+(e&&e.message||e));
   }
@@ -2269,7 +2297,7 @@ function scheduleAuto(){
   const iv=Math.max(15,+document.getElementById("ivsel").value||60);
   let left=iv;
   const wsOn=document.getElementById("wsChk").checked;
-  const tip=()=>isCrypto(curSym)?`(${left}s 后更新 · ${wsOn?"实时":"轮询"})`:`(${left}s 后更新 · 延迟行情)`;
+  const tip=()=>isCrypto(curSym)?`(${left}s 后更新 · ${wsOn?"实时":"轮询"})`:`(${left}s 后更新 · ${LIVE_CONTEXT.mode==="personal"?"个人数据中枢":LIVE_CONTEXT.mode==="server"?"联网数据":"延迟行情"})`;
   document.getElementById("nextTick").textContent=tip();
   ticking=setInterval(()=>{left--;if(left<0)left=iv;document.getElementById("nextTick").textContent=tip();},1000);
   timer=setInterval(refresh,iv*1000);
@@ -2280,6 +2308,8 @@ document.getElementById("autoChk").onchange=scheduleAuto;
 document.getElementById("ivsel").onchange=scheduleAuto;
 document.getElementById("wsChk").onchange=()=>{connectWS();scheduleAuto();};
 document.getElementById("symsel").onchange=e=>{curSym=e.target.value;refreshGeneration++;resetSymbolView();reload();};
+function openDirectSymbol(){const input=document.getElementById("customSymbol"),value=String(input.value||"").trim().toUpperCase().replace(/\s+/g,"");if(!/^[A-Z0-9.^=-]{1,24}$/.test(value)){document.getElementById("sdot").className="dot bad";document.getElementById("stext").textContent="市场代码格式无效";return;}const select=document.getElementById("symsel");select.querySelectorAll("option[data-custom]").forEach(option=>option.remove());if(![...select.options].some(option=>option.value===value)){const option=new Option(value,value);option.dataset.custom="true";select.prepend(option);}select.value=value;curSym=value;input.value="";refreshGeneration++;resetSymbolView();reload();}
+document.getElementById("openCustomSymbol").onclick=openDirectSymbol;document.getElementById("customSymbol").onkeydown=event=>{if(event.key==="Enter"){event.preventDefault();openDirectSymbol();}};
 document.getElementById("tfsel").onchange=e=>{curTF=e.target.value;RADAR=loadOppCache();radarAutoStarted=false;refreshGeneration++;document.getElementById("tfLabel").textContent=curTF;resetSymbolView();reload();};
 document.getElementById("acct").oninput=()=>recompute();
 document.getElementById("riskpct").oninput=()=>recompute();
@@ -2436,7 +2466,7 @@ function maybeStartTour(){const prefs=getTourPrefs();let skipped=false;try{skipp
 document.getElementById("tourClose").onclick=()=>endTour(false);document.getElementById("tourSkip").onclick=()=>endTour(false);document.getElementById("tourPrev").onclick=()=>moveTour(-1);document.getElementById("tourNext").onclick=()=>moveTour(1);document.getElementById("tourNoAuto").onchange=event=>setTourNoAuto(event.target.checked);
 window.addEventListener("resize",layoutTour);window.addEventListener("scroll",layoutTour,{passive:true});document.addEventListener("keydown",event=>{if(!tourState.active)return;if(event.key==="Escape")endTour(false);if(event.key==="ArrowLeft")moveTour(-1);if(event.key==="ArrowRight")moveTour(1);});
 // ---- 自选 & 雷达 ----
-const RADAR_ALLOWED=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","TONUSDT","AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AMD","AVGO","MU","SPY","QQQ","NDX","NQ","XAUUSD","WTI"];
+const RADAR_ALLOWED=["BTCUSDT","ETHUSDT","SOLUSDT","BNBUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","TONUSDT","AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","AMD","AVGO","MU","SPY","QQQ","NDX","NQ","ES","XAUUSD","WTI"];
 const DEFAULT_WATCH=["BTCUSDT","ETHUSDT","NQ","QQQ","NVDA","TSLA","SPY","XAUUSD"];
 function normalizeWatch(items){const allowed=new Set(RADAR_ALLOWED);return [...new Set((Array.isArray(items)?items:[]).map(x=>String(x).trim().toUpperCase()).filter(x=>allowed.has(x)))].slice(0,12);}
 function getWatch(){try{const saved=normalizeWatch(JSON.parse(localStorage.getItem('watch')));return saved.length?saved:DEFAULT_WATCH.slice();}catch(e){return DEFAULT_WATCH.slice();}}
@@ -2450,9 +2480,14 @@ const oppClamp=x=>Math.max(0,Math.min(1,x));
 function getOppAlerts(){try{return (JSON.parse(localStorage.getItem("opportunityAlertsV2")||"[]")||[]).filter(item=>item.day===oppDay());}catch(e){return[];}}
 function setOppAlerts(items){try{localStorage.setItem("opportunityAlertsV2",JSON.stringify(items));}catch(e){}}
 let RADAR=loadOppCache(),OPP_SORT="score",RADAR_FILTER="all",scanning=false,radarAutoStarted=false;
+async function prewarmRadarData(symbols){
+  const base=personalDataApiBase();if(!base||!['online','degraded'].includes(PERSONAL_HUB_STATUS.state))return;const wanted=[...new Set(Object.values(slots()))],queue=symbols.slice();
+  async function worker(){while(queue.length){const sym=queue.shift();try{await jget(`${base}/api/v1/market/bundle?symbol=${encodeURIComponent(sym)}&timeframes=${encodeURIComponent(wanted.join(','))}`,15000);}catch(e){}}}
+  await Promise.all(Array.from({length:Math.min(4,queue.length)},worker));
+}
 async function scanRadar(){
   if(scanning)return;const list=getWatch();if(!list.length)return;scanning=true;closeWS();if(timer)clearInterval(timer);if(ticking)clearInterval(ticking);
-  const button=document.getElementById("scanBtn"),st=document.getElementById('scanStatus'),saved={sym:curSym,dall:window.DALL,src:window.CURSRC,fund:FUND,s:S,l:L,levelMap:LEVELMAP,cards:CARDS,context:LIVE_CONTEXT};if(button)button.disabled=true;RADAR=[];renderRadar();
+  const button=document.getElementById("scanBtn"),st=document.getElementById('scanStatus'),saved={sym:curSym,dall:window.DALL,src:window.CURSRC,fund:FUND,s:S,l:L,levelMap:LEVELMAP,cards:CARDS,context:LIVE_CONTEXT};if(button)button.disabled=true;RADAR=[];renderRadar();st.textContent=`准备 ${list.length} 个市场的行情…`;await prewarmRadarData(list);
   for(let i=0;i<list.length;i++){const sym=list[i];st.textContent=`扫描中 ${i+1}/${list.length} · ${symbolLabel(sym)}`;document.getElementById("scanProgress").style.width=`${i/list.length*100}%`;
     try{const o=await getOHLC(sym),fund=await getFunding(sym),D=o.data,symbolContext=LIVE_CONTEXT;curSym=sym;FUND=fund;window.DALL=D;window.CURSRC=o.name;LIVE_CONTEXT=symbolContext;buildLevels(D);
       buildConfluenceMap();const cards=activeRoster().map(fn=>fn());
@@ -2560,6 +2595,22 @@ function renderGrowth(){
    ${closed.length?('<div class="ctx" style="margin:12px 0 6px">历史</div>'+closed.slice().reverse().map(t=>jrow(t,false)).join('')):''}
    <div class="demoflag" style="margin-top:12px">这是你亲手记录的真实交易战绩（本地保存）。真实、可追溯——比任何回测都有说服力。</div>`;
 }
+function personalHubProviderSummary(){
+  const p=PERSONAL_HUB_STATUS.providers||{},ready=[];
+  if(p.longbridge&&p.longbridge.available)ready.push("Longbridge");
+  if(p.ibkr&&p.ibkr.available)ready.push("IBKR");
+  if(p.binance&&p.binance.available)ready.push("Binance");
+  return ready.length?ready.join(" · "):PERSONAL_HUB_STATUS.message;
+}
+function openIbkrWebLogin(){window.open(`${personalDataApiBase()}/api/v1/ibkr/login`,"traderhome-ibkr-login");}
+async function probePersonalHub(deep=false){
+  const base=personalDataApiBase();PERSONAL_HUB_STATUS={state:"checking",message:"正在检测…",providers:null,checkedAt:Date.now()};renderMe();
+  try{
+    const d=await jget(`${base}/health${deep?'?probe=true':''}`,deep?14000:2600),providers=d.providers||{};
+    PERSONAL_HUB_STATUS={state:"online",message:"本机中枢已连接",providers,checkedAt:Date.now()};API_FAILURE_UNTIL.delete(base);
+  }catch(e){PERSONAL_HUB_STATUS={state:"offline",message:"本机中枢未运行，页面仍会使用公开后备源",providers:null,checkedAt:Date.now()};}
+  renderMe();return PERSONAL_HUB_STATUS;
+}
 function renderMe(){
   const box=document.getElementById('meBox'),j=getJournal(),tourPrefs=getTourPrefs();
   box.innerHTML=`
@@ -2569,6 +2620,7 @@ function renderMe(){
    <div class="mrow"><span>编辑自选</span><input value="${getWatch().join(',')}" style="width:210px" onchange="setWatch(this.value.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean));renderMe()"></div>
    <div class="mrow"><span>已记录交易</span><span>${j.length} 笔 <button class="btn" onclick="if(confirm('清空全部交易记录?')){setJournal([]);renderMe();}">清空</button></span></div>
    <div class="mrow"><span>高手偏好</span><button class="btn" onclick="clearSaved()">清除并重置</button></div>
+   <div class="mrow"><span><b>个人数据中枢</b><span class="rmini" style="display:block">${personalHubProviderSummary()}</span></span><span>${PERSONAL_HUB_STATUS.providers&&PERSONAL_HUB_STATUS.providers.ibkr&&PERSONAL_HUB_STATUS.providers.ibkr.authentication_required?'<button class="btn" onclick="openIbkrWebLogin()">登录 IBKR</button> ':''}<button class="btn" onclick="probePersonalHub(true)">${PERSONAL_HUB_STATUS.state==="checking"?'检测中':'检测数据源'}</button></span></div>
    <div class="mrow"><span><b>使用教程</b><span class="rmini" style="display:block">${tourPrefs.completed?'已完成，可随时重看':'尚未完整看完'}</span></span><button class="btn" onclick="startTour(true)">重新查看</button></div>
    <div class="mrow"><span>教程偏好</span><label class="chk"><input type="checkbox" ${tourPrefs.noAuto?'checked':''} onchange="setTourNoAuto(this.checked);renderMe()"> 以后不再自动弹出</label></div>
    <div class="evidence-line" style="margin-top:12px">个人偏好和交易记录仅保存在当前设备。</div>`;
@@ -2577,6 +2629,7 @@ document.getElementById("scanBtn").onclick=scanRadar;
 
 /* 启动 */
 window.addEventListener("ev-desk-coach-engine-ready",()=>{if(CARDS.length)recompute();});
+probePersonalHub(false);
 reload().finally(maybeStartTour);
 </script>
 </body>
